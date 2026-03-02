@@ -14,10 +14,47 @@ La base de connaissance est elle-même stockée dans fichier `kb.ndjson` (à la 
 
 ## Architecture technique
 
-- Backend : node, express
+- Backend : Node.js, Express
 - Frontend : React
-- Storage : Cloud Storage
-- Hosting : Cloud Run with IAP
+- Storage : Cloud Storage (Bucket pour les documents et le fichier `kb.ndjson`)
+- Hosting : Cloud Run avec Identity-Aware Proxy (IAP) activé directement sur le service
+- AI : Vertex AI Gemini 3 Pro (pour l'extraction de métadonnées et la génération de descriptions)
+
+
+## Détails d'implémentation technique
+
+### 1. Structure de la Base de Connaissances (`kb.ndjson`)
+Le fichier de métadonnées doit suivre le format NDJSON (Newline Delimited JSON) attendu par Vertex AI Search pour les données non structurées. Chaque ligne doit être un objet JSON valide :
+```json
+{
+  "id": "unique-doc-id",
+  "structData": {
+    "title": "Nom du fichier",
+    "description": "Description générée par l'IA",
+    "date_valeur": "YYYY-MM-DD"
+  },
+  "content": {
+    "mimeType": "application/pdf",
+    "uri": "gs://votre-bucket/chemin/vers/document.pdf"
+  }
+}
+```
+
+### 2. Traitement Automatisé (Pipeline d'Upload)
+Lors de l'upload d'un document, le backend doit :
+1. Enregistrer le fichier dans le bucket Cloud Storage.
+2. Utiliser **Gemini 3 Pro** via l'API Vertex AI pour :
+    - Analyser le contenu et le nom du fichier pour extraire la "date de valeur".
+    - Générer un court descriptif du fichier.
+3. Mettre à jour (append) le fichier `kb.ndjson` avec l'entrée correspondante.
+
+### 3. Gestion des Dossiers et Déplacements
+Cloud Storage utilisant un namespace "flat", les dossiers sont simulés par des préfixes dans les noms d'objets.
+- Création de dossier : Création d'un objet vide avec un suffixe `/`.
+- Déplacement : Utilisation de la méthode `file.move()` pour renommer le préfixe du fichier vers la nouvelle destination.
+
+### 4. Sécurité (Cloud Run + IAP)
+L'accès à l'interface est sécurisé via IAP configuré directement sur le service Cloud Run. Cela permet une authentification basée sur l'identité (Google Workspace) sans nécessiter de Load Balancer externe, garantissant que seuls les utilisateurs autorisés accèdent à l'outil de gestion.
 
 
 ## User Stories
