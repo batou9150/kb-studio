@@ -80,3 +80,26 @@ L'accès à l'interface est sécurisé via IAP configuré directement sur le ser
 
 - Preview du search avec une application vertex ai search directement interface
 
+
+## Endpoints API à implémenter
+
+### 📁 Gestion des Dossiers
+*   **`GET /api/folders`** : Lister tous les dossiers (structure arborescente).
+*   **`POST /api/folders`** : Créer un nouveau dossier.
+*   **`PUT /api/folders/:id`** : Renommer ou modifier un dossier.
+*   **`DELETE /api/folders/:id`** : Supprimer un dossier.
+
+### 📄 Gestion des Fichiers
+*   **`GET /api/files`** : Lister les fichiers (possibilité de filtrer par dossier).
+*   **`POST /api/files`** : Uploader un ou plusieurs fichiers. Déclenche l'analyse par Gemini 3 Pro et la mise à jour de `kb.ndjson`.
+*   **`PUT /api/files/:id`** : Mettre à jour une version de fichier.
+*   **`DELETE /api/files/:id`** : Supprimer un fichier (et son entrée dans `kb.ndjson`).
+*   **`GET /api/files/:id/download`** : Récupérer un lien de téléchargement (URL signée).
+*   **`PUT /api/files/:id/move`** : Déplacer un fichier vers un autre dossier (renommage du préfixe Cloud Storage).
+
+### 🔍 Search Preview (Optionnel)
+*   **`POST /api/search`** : Proxy pour interroger directement Vertex AI Search et prévisualiser les résultats de recherche RAG.
+
+### 🔗 Intégrations Tierces (Optionnel)
+*   **`POST /api/integrations/import`** : Importer des fichiers depuis Google Drive, OneDrive, etc.
+
