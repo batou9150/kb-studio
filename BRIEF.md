@@ -1,9 +1,11 @@
 # Brief "KB-Studio", interface de gestion de base de connaissance 
 
 Date : 2026-03-02
+
 Auteur : Baptiste PIRAULT
 
 Objectif : Permettre un utilisateur non technique de gérer une base de connaissance qui servira pour un système de rag dans le cadre d'agent conversationnel IA. 
+
 Tagline : Pilotez votre base de connaissances
 
 
