@@ -90,16 +90,42 @@ L'accès à l'interface est sécurisé via IAP configuré directement sur le ser
 *   **`DELETE /api/folders/:id`** : Supprimer un dossier.
 
 ### 📄 Gestion des Fichiers
-*   **`GET /api/files`** : Lister les fichiers (possibilité de filtrer par dossier).
-*   **`POST /api/files`** : Uploader un ou plusieurs fichiers. Déclenche l'analyse par Gemini 3 Pro et la mise à jour de `kb.ndjson`.
-*   **`PUT /api/files/:id`** : Mettre à jour une version de fichier.
+*   **`GET /api/files`** : Lister les fichiers. Possibilité de filtrer par dossier (`?folderId=`) ou par nom de fichier (`?search=`).
+*   **`POST /api/files`** : Uploader un ou plusieurs fichiers. Déclenche l'analyse par Gemini 3 Pro et la création de l'entrée dans `kb.ndjson`.
+*   **`PUT /api/files/:id`** : Mettre à jour le fichier physique (nouvelle version). Redéclenche l'analyse Gemini.
+*   **`PATCH /api/files/:id`** : Mettre à jour uniquement les métadonnées du fichier (Renommage, correction manuelle de la `Date de valeur` ou `Description` via le volet latéral).
 *   **`DELETE /api/files/:id`** : Supprimer un fichier (et son entrée dans `kb.ndjson`).
-*   **`GET /api/files/:id/download`** : Récupérer un lien de téléchargement (URL signée).
+*   **`GET /api/files/:id/download`** : Récupérer une URL signée pour la prévisualisation (*inline*) ou le téléchargement.
 *   **`PUT /api/files/:id/move`** : Déplacer un fichier vers un autre dossier (renommage du préfixe Cloud Storage).
 
-### 🔍 Search Preview (Optionnel)
-*   **`POST /api/search`** : Proxy pour interroger directement Vertex AI Search et prévisualiser les résultats de recherche RAG.
 
-### 🔗 Intégrations Tierces (Optionnel)
-*   **`POST /api/integrations/import`** : Importer des fichiers depuis Google Drive, OneDrive, etc.
+## Organisation de l'Interface (UI)
+
+### 📐 Mise en page globale (Layout)
+*   **Barre de navigation supérieure (Header)** :
+    *   **Logo/Titre** : KB-Studio.
+    *   **Fil d'Ariane (Breadcrumbs)** : Affiche l'emplacement actuel (ex: `Racine > RH > Contrats`).
+    *   **Barre de recherche rapide** : Pour trouver un document par son nom.
+*   **Sidebar gauche (Arborescence uniquement)** :
+    *   **Arbre des dossiers** : Une vue hiérarchique dépliable de tous les dossiers pour une navigation rapide et servant de cible pour le "Glisser-Déposer".
+
+### 🖼️ Vues principales
+
+#### 1. L'Explorateur (Vue centrale)
+*   **Barre d'actions** : 
+    *   Boutons `+ Nouveau Dossier`, `⬆️ Téléverser des fichiers`.
+    *   Zone de "Drag & Drop" globale sur la vue pour l'upload.
+*   **Tableau des données (Liste)** :
+    *   **Colonnes** : 
+        *   Icône (Type de fichier/dossier), Nom, Date de valeur (Extraite par Gemini 3 Pro), Description (Résumé généré par Gemini 3 Pro), Actions (Menu "..." : Renommer, Déplacer, Télécharger, Supprimer).
+*   **Interactions** : Le clic sur un dossier permet d'y entrer. Le clic sur un fichier ouvre le volet de détails/prévisualisation.
+
+#### 2. Volet de détails (Panel latéral droit)
+Lorsqu'un fichier est sélectionné, un volet coulissant s'affiche à droite :
+*   **Aperçu** : Visionneuse intégrée (PDF, Image, Texte).
+*   **Métadonnées éditables** :
+    *   Permet à l'utilisateur de modifier manuellement la `Date de valeur` ou la `Description` si l'IA a fait une erreur.
+    *   Bouton d'enregistrement pour mettre à jour le fichier `kb.ndjson`.
+*   **Actions rapides** : Télécharger, Supprimer.
+
 
