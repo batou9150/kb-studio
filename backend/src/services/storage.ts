@@ -166,7 +166,7 @@ export const getKbMetadata = async (): Promise<KbEntry[]> => {
     if (!exists) return [];
     
     const [content] = await bucket.file(kbJsonFile).download();
-    const lines = content.toString().trim().split("\\n");
+    const lines = content.toString().trim().split(/\\n|\n/);
     return lines.filter(line => line.trim() !== '').map(line => JSON.parse(line));
   } catch (error) {
     console.error('Error reading kb.ndjson:', error);
@@ -175,7 +175,7 @@ export const getKbMetadata = async (): Promise<KbEntry[]> => {
 };
 
 const saveKbMetadata = async (metadata: KbEntry[]) => {
-  const ndjson = metadata.map(entry => JSON.stringify(entry)).join("\\n") + "\\n";
+  const ndjson = metadata.map(entry => JSON.stringify(entry)).join("\n") + "\n";
   await bucket.file(kbJsonFile).save(ndjson, {
     metadata: { contentType: 'application/x-ndjson' }
   });
