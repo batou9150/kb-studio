@@ -123,6 +123,24 @@ export const deleteFile = async (filePath: string) => {
   await removeKbEntry(encodeURIComponent(filePath));
 };
 
+export const renameFile = async (filePath: string, newName: string) => {
+  const folderPath = filePath.substring(0, filePath.lastIndexOf('/') + 1);
+  const newFilePath = folderPath + newName;
+
+  await bucket.file(filePath).move(newFilePath);
+
+  // Update kb.ndjson
+  const metadata = await getKbMetadata();
+  const entry = metadata.find(m => m.id === encodeURIComponent(filePath));
+  if (entry) {
+    entry.id = encodeURIComponent(newFilePath);
+    entry.content.uri = `gs://${bucketName}/${newFilePath}`;
+    entry.structData.title = newName;
+    await saveKbMetadata(metadata);
+  }
+  return newFilePath;
+};
+
 export const moveFile = async (filePath: string, newFolderPath: string) => {
   const fileName = filePath.split('/').pop() || filePath;
   const newFilePath = newFolderPath ? `${newFolderPath.endsWith('/') ? newFolderPath : newFolderPath + '/'}${fileName}` : fileName;
