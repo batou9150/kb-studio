@@ -1,0 +1,374 @@
+import { useState, useEffect, useCallback } from 'react';
+import { api } from '../api';
+import type { DataStoreStatus, DataStoreDocument } from '../types';
+import { Loader, AlertTriangle, CheckCircle, RefreshCw, Trash2, Upload, Plus, ExternalLink } from 'lucide-react';
+
+const STORAGE_KEY = 'kb-studio-search-selected';
+
+interface DataStoreOption {
+  dataStoreId: string;
+  displayName: string;
+  location: string;
+}
+
+export const SearchPanel: React.FC = () => {
+  // Datastore list
+  const [dataStores, setDataStores] = useState<DataStoreOption[]>([]);
+  const [dataStoresLoading, setDataStoresLoading] = useState(true);
+
+  // Selected datastore
+  const [dataStoreId, setDataStoreId] = useState('');
+  const [location, setLocation] = useState('global');
+
+  // Create form
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newId, setNewId] = useState('');
+  const [newDisplayName, setNewDisplayName] = useState('');
+  const [newLocation, setNewLocation] = useState('global');
+
+  const [status, setStatus] = useState<DataStoreStatus | null>(null);
+  const [documents, setDocuments] = useState<DataStoreDocument[]>([]);
+  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
+
+  const [loading, setLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchDataStores = useCallback(async () => {
+    setDataStoresLoading(true);
+    try {
+      const list = await api.listDataStores();
+      setDataStores(list);
+      return list;
+    } catch {
+      setDataStores([]);
+      return [];
+    } finally {
+      setDataStoresLoading(false);
+    }
+  }, []);
+
+  // Load datastore list + restore last selection
+  useEffect(() => {
+    fetchDataStores().then(list => {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved && list.length > 0) {
+        try {
+          const { dataStoreId: savedId, location: savedLoc } = JSON.parse(saved);
+          if (list.some(ds => ds.dataStoreId === savedId && ds.location === savedLoc)) {
+            setDataStoreId(savedId);
+            setLocation(savedLoc);
+            return;
+          }
+        } catch {}
+      }
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Persist selection
+  useEffect(() => {
+    if (dataStoreId) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ dataStoreId, location }));
+    }
+  }, [dataStoreId, location]);
+
+  const fetchStatus = useCallback(async () => {
+    if (!dataStoreId) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const s = await api.getDataStoreStatus(dataStoreId, location);
+      setStatus(s);
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [dataStoreId, location]);
+
+  const fetchDocuments = useCallback(async (append = false) => {
+    if (!dataStoreId) return;
+    try {
+      const token = append ? nextPageToken : undefined;
+      const res = await api.listDataStoreDocuments(dataStoreId, location, 20, token ?? undefined);
+      setDocuments(prev => append ? [...prev, ...res.documents] : res.documents);
+      setNextPageToken(res.nextPageToken);
+    } catch {}
+  }, [dataStoreId, location, nextPageToken]);
+
+  // Auto-fetch when selection changes
+  useEffect(() => {
+    if (dataStoreId) {
+      setStatus(null);
+      setDocuments([]);
+      setNextPageToken(null);
+      fetchStatus();
+      fetchDocuments();
+    }
+  }, [dataStoreId, location]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleSelectChange = (value: string) => {
+    if (value === '__new__') {
+      setShowCreateForm(true);
+      return;
+    }
+    setShowCreateForm(false);
+    const ds = dataStores.find(d => `${d.location}/${d.dataStoreId}` === value);
+    if (ds) {
+      setDataStoreId(ds.dataStoreId);
+      setLocation(ds.location);
+    }
+  };
+
+  const handleCreate = async () => {
+    if (!newId || !newDisplayName) return;
+    setActionLoading('create');
+    setError(null);
+    try {
+      await api.createDataStore(newId, newDisplayName, newLocation);
+      await fetchDataStores();
+      setDataStoreId(newId);
+      setLocation(newLocation);
+      setShowCreateForm(false);
+      setNewId('');
+      setNewDisplayName('');
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleImport = async (mode: 'INCREMENTAL' | 'FULL') => {
+    setActionLoading(`import-${mode}`);
+    setError(null);
+    try {
+      await api.importDocuments(dataStoreId, location, mode);
+      await fetchStatus();
+      await fetchDocuments();
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handlePurge = async () => {
+    if (!window.confirm('Purger tous les documents du datastore ?')) return;
+    if (!window.confirm('Cette action est irréversible. Confirmer la purge ?')) return;
+    setActionLoading('purge');
+    setError(null);
+    try {
+      await api.purgeDocuments(dataStoreId, location);
+      await fetchStatus();
+      setDocuments([]);
+      setNextPageToken(null);
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const isActionLoading = actionLoading !== null;
+  const selectedKey = dataStoreId ? `${location}/${dataStoreId}` : '';
+
+  return (
+    <div className="admin-panel">
+      {/* Datastore selection */}
+      <div className="admin-section">
+        <div className="admin-section-header">
+          <h2>Datastore</h2>
+          {status?.consoleUrl && !showCreateForm && (
+            <a className="btn btn-outline" href={status.consoleUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.85rem', padding: '4px 12px' }}>
+              <ExternalLink size={14} /> Voir dans la Console
+            </a>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <div className="form-group" style={{ flex: 1, minWidth: 250, marginBottom: 0 }}>
+            <label>Datastore</label>
+            {dataStoresLoading ? (
+              <div className="form-control" style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-secondary)' }}>
+                <Loader size={14} className="spinner" /> Chargement...
+              </div>
+            ) : (
+              <select
+                className="form-control"
+                value={showCreateForm ? '__new__' : selectedKey}
+                onChange={e => handleSelectChange(e.target.value)}
+              >
+                <option value="" disabled>Sélectionner un datastore...</option>
+                {dataStores.map(ds => (
+                  <option key={`${ds.location}/${ds.dataStoreId}`} value={`${ds.location}/${ds.dataStoreId}`}>
+                    {ds.displayName} ({ds.location}) — {ds.dataStoreId}
+                  </option>
+                ))}
+                <option value="__new__">+ Créer un nouveau datastore</option>
+              </select>
+            )}
+          </div>
+        </div>
+
+        {/* Create form */}
+        {showCreateForm && (
+          <div style={{ marginTop: 16, padding: 16, border: '1px solid var(--border-color)', borderRadius: 8, background: 'var(--bg-color)' }}>
+            <div style={{ display: 'flex', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+              <div className="form-group" style={{ flex: 1, minWidth: 180, marginBottom: 0 }}>
+                <label>Datastore ID</label>
+                <input className="form-control" value={newId} onChange={e => setNewId(e.target.value)} placeholder="my-kb-datastore" />
+              </div>
+              <div className="form-group" style={{ flex: 1, minWidth: 180, marginBottom: 0 }}>
+                <label>Nom d'affichage</label>
+                <input className="form-control" value={newDisplayName} onChange={e => setNewDisplayName(e.target.value)} placeholder="Ma Base de Connaissances" />
+              </div>
+              <div className="form-group" style={{ minWidth: 120, marginBottom: 0 }}>
+                <label>Région</label>
+                <select className="form-control" value={newLocation} onChange={e => setNewLocation(e.target.value)}>
+                  <option value="global">Global</option>
+                  <option value="eu">EU</option>
+                  <option value="us">US</option>
+                </select>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button className="btn btn-primary" onClick={handleCreate} disabled={!newId || !newDisplayName || isActionLoading}>
+                {actionLoading === 'create' ? <Loader size={16} className="spinner" /> : <Plus size={16} />}
+                Créer
+              </button>
+              <button className="btn btn-outline" onClick={() => setShowCreateForm(false)}>
+                Annuler
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {error && (
+        <div style={{ padding: '12px 16px', background: '#fef2f2', border: '1px solid var(--danger-color)', borderRadius: 6, marginBottom: 24, color: 'var(--danger-color)', fontSize: '0.9rem' }}>
+          {error}
+        </div>
+      )}
+
+      {/* Status */}
+      {dataStoreId && (
+        <div className="admin-section">
+          <div className="admin-section-header">
+            <h2>Statut</h2>
+            <button className="icon-btn" title="Rafraîchir" onClick={fetchStatus} disabled={loading}>
+              <RefreshCw size={18} className={loading ? 'spinner' : ''} />
+            </button>
+          </div>
+
+          {loading && !status ? (
+            <div className="loading"><Loader size={20} className="spinner" /> Chargement...</div>
+          ) : status ? (
+            <table className="file-table">
+              <tbody>
+                <tr><td style={{ fontWeight: 600 }}>Documents dans le datastore</td><td>{status.documentCount}</td></tr>
+                <tr><td style={{ fontWeight: 600 }}>Entrées dans kb.ndjson</td><td>{status.kbEntryCount}</td></tr>
+                <tr><td style={{ fontWeight: 600 }}>kb.ndjson modifié le</td><td>{status.kbNdjsonUpdatedAt ? new Date(status.kbNdjsonUpdatedAt).toLocaleString() : '—'}</td></tr>
+                <tr><td style={{ fontWeight: 600 }}>Dernier import</td><td>{status.lastImportTime ? new Date(status.lastImportTime).toLocaleString() : '—'}</td></tr>
+                <tr>
+                  <td style={{ fontWeight: 600 }}>Synchronisation</td>
+                  <td>
+                    {status.isUpToDate ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--success-color)', fontWeight: 500 }}>
+                        <CheckCircle size={16} /> À jour
+                      </span>
+                    ) : (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--warning-color)', fontWeight: 500 }}>
+                        <AlertTriangle size={16} /> Nécessite un ré-import
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          ) : null}
+        </div>
+      )}
+
+      {/* Import */}
+      {status?.exists && (
+        <div className="admin-section">
+          <div className="admin-section-header">
+            <h2>Import</h2>
+          </div>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <button className="btn btn-primary" onClick={() => handleImport('INCREMENTAL')} disabled={isActionLoading}>
+              {actionLoading === 'import-INCREMENTAL' ? <Loader size={16} className="spinner" /> : <Upload size={16} />}
+              Import (Incrémental)
+            </button>
+            <button className="btn btn-outline" onClick={() => handleImport('FULL')} disabled={isActionLoading}>
+              {actionLoading === 'import-FULL' ? <Loader size={16} className="spinner" /> : <Upload size={16} />}
+              Import (Full)
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Documents */}
+      {status?.exists && (
+        <div className="admin-section">
+          <div className="admin-section-header">
+            <h2>Documents ({status.documentCount})</h2>
+            <button className="icon-btn" title="Rafraîchir" onClick={() => fetchDocuments()}>
+              <RefreshCw size={18} />
+            </button>
+          </div>
+
+          {documents.length > 0 ? (
+            <>
+              <table className="file-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>URI</th>
+                    <th>Titre</th>
+                    <th>Date valeur</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {documents.map(doc => (
+                    <tr key={doc.id}>
+                      <td style={{ fontSize: '0.8rem', fontFamily: 'monospace', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.id}</td>
+                      <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={doc.uri}>
+                        {doc.uri.split('/').pop() || doc.uri}
+                      </td>
+                      <td>{doc.structData?.title || '—'}</td>
+                      <td>{doc.structData?.value_date || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {nextPageToken && (
+                <div style={{ marginTop: 16, textAlign: 'center' }}>
+                  <button className="btn btn-outline" onClick={() => fetchDocuments(true)}>Charger plus</button>
+                </div>
+              )}
+            </>
+          ) : (
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Aucun document dans le datastore.</p>
+          )}
+        </div>
+      )}
+
+      {/* Danger zone */}
+      {status?.exists && (
+        <div className="danger-zone">
+          <div className="danger-zone-header">
+            <AlertTriangle size={20} />
+            <h3>Zone dangereuse</h3>
+          </div>
+          <p>Purger tous les documents du datastore Vertex AI Search. Les fichiers dans GCS ne sont pas affectés.</p>
+          <button className="btn btn-danger" onClick={handlePurge} disabled={isActionLoading}>
+            {actionLoading === 'purge' ? <Loader size={16} className="spinner" /> : <Trash2 size={16} />}
+            {actionLoading === 'purge' ? 'Purge en cours...' : 'Purger tous les documents'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};

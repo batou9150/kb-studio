@@ -9,6 +9,14 @@ import {
   extractValueDate, resolveFilePath
 } from './services/storage';
 import type { KbEntry } from './services/storage';
+import {
+  listDataStores as searchListDataStores,
+  createDataStore as searchCreateDataStore,
+  importDocuments as searchImportDocuments,
+  getDataStoreStatus as searchGetDataStoreStatus,
+  purgeDocuments as searchPurgeDocuments,
+  listDocuments as searchListDocuments,
+} from './services/search';
 
 
 const app = express();
@@ -291,6 +299,80 @@ app.delete('/api/files', async (req, res) => {
   try {
     await deleteAllFiles();
     res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- Search / Datastore routes ---
+
+// GET /api/search/datastores — List datastores across all locations
+app.get('/api/search/datastores', async (req, res) => {
+  try {
+    const result = await searchListDataStores();
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/search/datastores — Create datastore
+app.post('/api/search/datastores', async (req, res) => {
+  try {
+    const { dataStoreId, displayName, location = 'global' } = req.body;
+    if (!dataStoreId || !displayName) return res.status(400).json({ error: 'dataStoreId and displayName are required' });
+    const result = await searchCreateDataStore(dataStoreId, displayName, location);
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/search/datastores/:id/import — Import documents
+app.post('/api/search/datastores/:id/import', async (req, res) => {
+  try {
+    const dataStoreId = req.params.id as string;
+    const { location = 'global', mode = 'INCREMENTAL' } = req.body;
+    const result = await searchImportDocuments(dataStoreId, location, mode);
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/search/datastores/:id/status — Get status
+app.get('/api/search/datastores/:id/status', async (req, res) => {
+  try {
+    const dataStoreId = req.params.id as string;
+    const location = (req.query.location as string) || 'global';
+    const status = await searchGetDataStoreStatus(dataStoreId, location);
+    res.json(status);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/search/datastores/:id/documents — Purge all documents
+app.delete('/api/search/datastores/:id/documents', async (req, res) => {
+  try {
+    const dataStoreId = req.params.id as string;
+    const location = (req.query.location as string) || 'global';
+    const result = await searchPurgeDocuments(dataStoreId, location);
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/search/datastores/:id/documents — List documents
+app.get('/api/search/datastores/:id/documents', async (req, res) => {
+  try {
+    const dataStoreId = req.params.id as string;
+    const location = (req.query.location as string) || 'global';
+    const pageSize = parseInt(req.query.pageSize as string) || 20;
+    const pageToken = (req.query.pageToken as string) || undefined;
+    const result = await searchListDocuments(dataStoreId, location, pageSize, pageToken);
+    res.json(result);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

@@ -1,12 +1,12 @@
 import React from 'react';
-import { Search, Database, ChevronRight, Settings } from 'lucide-react';
+import { Search, Database, ChevronRight, Settings, Globe } from 'lucide-react';
 
 interface HeaderProps {
   currentFolder: string;
-  currentView: 'explorer' | 'admin';
+  currentView: 'explorer' | 'admin' | 'search';
   onSearch: (query: string) => void;
   onNavigate: (folderId: string) => void;
-  onViewChange: (view: 'explorer' | 'admin') => void;
+  onViewChange: (view: 'explorer' | 'admin' | 'search') => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({ currentFolder, currentView, onSearch, onNavigate, onViewChange }) => {
@@ -47,6 +47,13 @@ export const Header: React.FC<HeaderProps> = ({ currentFolder, currentView, onSe
             />
           </div>
         )}
+        <button
+          className={`icon-btn ${currentView === 'search' ? 'active' : ''}`}
+          title="Vertex AI Search"
+          onClick={() => onViewChange(currentView === 'search' ? 'explorer' : 'search')}
+        >
+          <Globe size={20} />
+        </button>
         <button
           className={`icon-btn ${currentView === 'admin' ? 'active' : ''}`}
           title="Administration"

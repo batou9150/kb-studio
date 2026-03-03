@@ -20,7 +20,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ folders, currentFolder, onSele
     let currentLevel = tree;
     let pathAcc = '';
     
-    parts.forEach((part, i) => {
+    parts.forEach((part, _i) => {
       pathAcc += part + '/';
       let existingNode = currentLevel.find(n => n.name === part);
       
