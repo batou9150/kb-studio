@@ -19,19 +19,32 @@ export const api = {
   },
   
   // Files
+  checkDuplicates: async (fileNames: string[]): Promise<{ duplicates: string[] }> => {
+    const res = await apiClient.post('/files/check-duplicates', { fileNames });
+    return res.data;
+  },
   getFiles: async (folderId?: string, search?: string): Promise<FileItem[]> => {
-    const params = new URLSearchParams();
-    if (folderId) params.append('folderId', folderId);
-    if (search) params.append('search', search);
-    
-    const res = await apiClient.get(`/files?${params.toString()}`);
+    const params: Record<string, string> = {};
+    if (folderId) params.folderId = folderId;
+    if (search) params.search = search;
+
+    const res = await apiClient.get('/files', { params });
     return res.data;
   },
   uploadFiles: async (files: File[], folderId: string) => {
     const formData = new FormData();
+    const relativePaths = files.map(f => {
+      // webkitRelativePath is set by <input webkitdirectory>
+      // path is set by file-selector (react-dropzone) on folder drops
+      const rp = (f.webkitRelativePath || (f as any).path || '').replace(/^\//, '');
+      // Extract the directory portion (strip the filename)
+      const lastSlash = rp.lastIndexOf('/');
+      return lastSlash > -1 ? rp.substring(0, lastSlash) : '';
+    });
     files.forEach(f => formData.append('files', f));
     formData.append('folderId', folderId);
-    
+    formData.append('relativePaths', JSON.stringify(relativePaths));
+
     const res = await apiClient.post('/files', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
@@ -54,12 +67,23 @@ export const api = {
     const res = await apiClient.delete(`/files/${encodeURIComponent(id)}`);
     return res.data;
   },
-  downloadFile: async (id: string): Promise<{ url: string }> => {
-    const res = await apiClient.get(`/files/${encodeURIComponent(id)}/download`);
-    return res.data;
+  getDownloadUrl: (id: string): string => {
+    return `${API_BASE_URL}/files/${encodeURIComponent(id)}/download`;
   },
   moveFile: async (id: string, newFolderId: string) => {
     const res = await apiClient.put(`/files/${encodeURIComponent(id)}/move`, { newFolderId });
+    return res.data;
+  },
+  renameFolder: async (id: string, newName: string) => {
+    const res = await apiClient.put(`/folders/${encodeURIComponent(id)}`, { newName });
+    return res.data;
+  },
+  deleteFolder: async (id: string) => {
+    const res = await apiClient.delete(`/folders/${encodeURIComponent(id)}`);
+    return res.data;
+  },
+  deleteAllFiles: async () => {
+    const res = await apiClient.delete('/files');
     return res.data;
   }
 };

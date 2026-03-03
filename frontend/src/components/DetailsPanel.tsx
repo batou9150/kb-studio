@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, FileText, Download, Trash2, Move } from 'lucide-react';
+import { X, Save, FileText } from 'lucide-react';
 import type { FileItem } from '../types';
 
 interface DetailsPanelProps {
@@ -7,13 +7,10 @@ interface DetailsPanelProps {
   isOpen: boolean;
   onClose: () => void;
   onUpdateMetadata: (id: string, description: string, date: string) => void;
-  onDownload: (id: string) => void;
-  onDelete: (id: string) => void;
-  onMove: (id: string) => void;
 }
 
-export const DetailsPanel: React.FC<DetailsPanelProps> = ({ 
-  file, isOpen, onClose, onUpdateMetadata, onDownload, onDelete, onMove 
+export const DetailsPanel: React.FC<DetailsPanelProps> = ({
+  file, isOpen, onClose, onUpdateMetadata
 }) => {
   const [description, setDescription] = useState('');
   const [date, setDate] = useState('');
@@ -84,23 +81,6 @@ export const DetailsPanel: React.FC<DetailsPanelProps> = ({
         <button className="btn btn-primary" style={{ width: '100%' }} onClick={handleSave}>
           <Save size={16} /> Enregistrer les modifications
         </button>
-
-        <hr style={{ margin: '24px 0', borderColor: 'var(--border-color)', borderTop: 'none' }} />
-
-        <div className="form-group">
-          <label>Actions rapides</label>
-          <div className="panel-actions">
-            <button className="btn btn-outline" onClick={() => onDownload(file.id)}>
-              <Download size={16} /> Télécharger
-            </button>
-            <button className="btn btn-outline" onClick={() => onMove(file.id)}>
-              <Move size={16} /> Déplacer
-            </button>
-          </div>
-          <button className="btn btn-danger" style={{ width: '100%', marginTop: '12px' }} onClick={() => onDelete(file.id)}>
-            <Trash2 size={16} /> Supprimer le fichier
-          </button>
-        </div>
       </div>
     </div>
   );
