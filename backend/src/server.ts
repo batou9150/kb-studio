@@ -1,11 +1,12 @@
 import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
+import { v4 as uuidv4 } from 'uuid';
 import {
   initStorage, getFolders, createFolder, getFiles, uploadFile,
   getFileStream, deleteFile, moveFile, appendKbEntries, updateKbEntry, getKbMetadata,
   checkFilesExist, renameFile, renameFolder, deleteFolder, deleteAllFiles,
-  extractDateValeur
+  extractDateValeur, resolveFilePath
 } from './services/storage';
 import type { KbEntry } from './services/storage';
 
@@ -108,7 +109,7 @@ app.post('/api/files', upload.array('files'), async (req, res) => {
 
       const filePath = await uploadFile(file, folderPath);
 
-      const id = encodeURIComponent(filePath);
+      const id = uuidv4();
       kbEntries.push({
         id,
         structData: {
@@ -141,8 +142,8 @@ app.put('/api/files/:id', upload.single('file'), async (req, res) => {
     if (!file) return res.status(400).json({ error: 'No file provided' });
 
     file.originalname = Buffer.from(file.originalname, 'latin1').toString('utf-8').normalize('NFC');
-    const decodedFilePath = decodeURIComponent(id);
-    const folderPath = decodedFilePath.substring(0, decodedFilePath.lastIndexOf('/')) || '';
+    const resolvedPath = await resolveFilePath(id);
+    const folderPath = resolvedPath.substring(0, resolvedPath.lastIndexOf('/')) || '';
 
     const filePath = await uploadFile(file, folderPath);
 
@@ -169,7 +170,7 @@ app.patch('/api/files/:id', async (req, res) => {
 app.delete('/api/files/:id', async (req, res) => {
   try {
     const id = req.params.id as string;
-    const filePath = decodeURIComponent(id);
+    const filePath = await resolveFilePath(id);
     await deleteFile(filePath);
     res.json({ success: true });
   } catch (err: any) {
@@ -181,7 +182,7 @@ app.delete('/api/files/:id', async (req, res) => {
 app.get('/api/files/:id/preview', async (req, res) => {
   try {
     const id = req.params.id as string;
-    const filePath = decodeURIComponent(id);
+    const filePath = await resolveFilePath(id);
     const fileName = filePath.split('/').pop() || filePath;
 
     const { stream, getMetadata } = getFileStream(filePath);
@@ -208,7 +209,7 @@ app.get('/api/files/:id/preview', async (req, res) => {
 app.get('/api/files/:id/download', async (req, res) => {
   try {
     const id = req.params.id as string;
-    const filePath = decodeURIComponent(id);
+    const filePath = await resolveFilePath(id);
     const fileName = filePath.split('/').pop() || filePath;
 
     const { stream, getMetadata } = getFileStream(filePath);
@@ -237,7 +238,7 @@ app.put('/api/files/:id/rename', async (req, res) => {
     const id = req.params.id as string;
     const { newName } = req.body;
     if (!newName) return res.status(400).json({ error: 'newName is required' });
-    const filePath = decodeURIComponent(id);
+    const filePath = await resolveFilePath(id);
     const newPath = await renameFile(filePath, newName);
     res.json({ success: true, newPath });
   } catch (err: any) {
@@ -250,8 +251,8 @@ app.put('/api/files/:id/move', async (req, res) => {
   try {
     const id = req.params.id as string;
     const { newFolderId } = req.body;
-    const filePath = decodeURIComponent(id);
-    
+    const filePath = await resolveFilePath(id);
+
     const newPath = await moveFile(filePath, newFolderId);
     res.json({ success: true, newPath });
   } catch (err: any) {

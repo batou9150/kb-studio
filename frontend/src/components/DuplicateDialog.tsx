@@ -2,13 +2,13 @@ import React from 'react';
 import { AlertTriangle, X } from 'lucide-react';
 
 interface DuplicateDialogProps {
-  duplicateNames: string[];
+  duplicates: {name: string, id: string}[];
   onOverwrite: () => void;
   onCancel: () => void;
 }
 
 export const DuplicateDialog: React.FC<DuplicateDialogProps> = ({
-  duplicateNames,
+  duplicates,
   onOverwrite,
   onCancel,
 }) => {
@@ -27,16 +27,16 @@ export const DuplicateDialog: React.FC<DuplicateDialogProps> = ({
 
         <div className="modal-body">
           <p>
-            {duplicateNames.length === 1
+            {duplicates.length === 1
               ? 'Le fichier suivant existe déjà dans ce dossier :'
               : 'Les fichiers suivants existent déjà dans ce dossier :'}
           </p>
           <ul className="duplicate-list">
-            {duplicateNames.map((name) => (
-              <li key={name}>{name}</li>
+            {duplicates.map((d) => (
+              <li key={d.id}>{d.name}</li>
             ))}
           </ul>
-          <p>Voulez-vous remplacer {duplicateNames.length === 1 ? 'ce fichier' : 'ces fichiers'} ?</p>
+          <p>Voulez-vous remplacer {duplicates.length === 1 ? 'ce fichier' : 'ces fichiers'} ?</p>
         </div>
 
         <div className="modal-footer">
