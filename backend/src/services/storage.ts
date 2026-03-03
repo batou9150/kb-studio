@@ -263,6 +263,40 @@ export const deleteFolder = async (folderPath: string) => {
   }
 };
 
+export function extractDateValeur(filename: string): string {
+  // Strip extension
+  const name = filename.replace(/\.[^.]+$/, '');
+
+  const sep = `[_\\-.\\s/]`;
+  const YYYY = `((?:19|20)\\d{2})`;
+  const MM = `(0?[1-9]|1[0-2])`;
+  const DD = `(0?[1-9]|[12]\\d|3[01])`;
+
+  const pad = (s: string) => s.padStart(2, '0');
+
+  // 1. YYYY sep MM sep DD
+  let m = name.match(new RegExp(`(?<!\\d)${YYYY}${sep}${MM}${sep}${DD}(?!\\d)`));
+  if (m) return `${m[1]}-${pad(m[2])}-${pad(m[3])}`;
+
+  // 2. DD sep MM sep YYYY
+  m = name.match(new RegExp(`(?<!\\d)${DD}${sep}${MM}${sep}${YYYY}(?!\\d)`));
+  if (m) return `${m[3]}-${pad(m[2])}-${pad(m[1])}`;
+
+  // 3. MM sep YYYY
+  m = name.match(new RegExp(`(?<!\\d)${MM}${sep}${YYYY}(?!\\d)`));
+  if (m) return `${m[2]}-${pad(m[1])}-01`;
+
+  // 4. YYYY sep MM
+  m = name.match(new RegExp(`(?<!\\d)${YYYY}${sep}${MM}(?!\\d)`));
+  if (m) return `${m[1]}-${pad(m[2])}-01`;
+
+  // 5. YYYY alone
+  m = name.match(new RegExp(`(?<!\\d)${YYYY}(?!\\d)`));
+  if (m) return `${m[1]}-01-01`;
+
+  return '';
+}
+
 export const deleteAllFiles = async () => {
   const [files] = await bucket.getFiles();
 

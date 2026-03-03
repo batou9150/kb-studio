@@ -4,7 +4,8 @@ import multer from 'multer';
 import {
   initStorage, getFolders, createFolder, getFiles, uploadFile,
   getFileStream, deleteFile, moveFile, appendKbEntries, updateKbEntry, getKbMetadata,
-  checkFilesExist, renameFile, renameFolder, deleteFolder, deleteAllFiles
+  checkFilesExist, renameFile, renameFolder, deleteFolder, deleteAllFiles,
+  extractDateValeur
 } from './services/storage';
 import type { KbEntry } from './services/storage';
 
@@ -113,7 +114,7 @@ app.post('/api/files', upload.array('files'), async (req, res) => {
         structData: {
           title: file.originalname,
           description: '',
-          date_valeur: '',
+          date_valeur: extractDateValeur(file.originalname),
         },
         content: {
           mimeType: file.mimetype,
@@ -171,6 +172,33 @@ app.delete('/api/files/:id', async (req, res) => {
     const filePath = decodeURIComponent(id);
     await deleteFile(filePath);
     res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/files/:id/preview
+app.get('/api/files/:id/preview', async (req, res) => {
+  try {
+    const id = req.params.id as string;
+    const filePath = decodeURIComponent(id);
+    const fileName = filePath.split('/').pop() || filePath;
+
+    const { stream, getMetadata } = getFileStream(filePath);
+    const [metadata] = await getMetadata();
+
+    res.setHeader('Content-Type', metadata.contentType || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `inline; filename*=UTF-8''${encodeURIComponent(fileName)}`);
+    if (metadata.size) {
+      res.setHeader('Content-Length', metadata.size);
+    }
+
+    stream.pipe(res);
+    stream.on('error', (err: any) => {
+      if (!res.headersSent) {
+        res.status(500).json({ error: err.message });
+      }
+    });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
