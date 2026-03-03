@@ -4,7 +4,7 @@ import multer from 'multer';
 import {
   initStorage, getFolders, createFolder, getFiles, uploadFile,
   getFileStream, deleteFile, moveFile, appendKbEntries, updateKbEntry, getKbMetadata,
-  checkFilesExist, renameFolder, deleteFolder, deleteAllFiles
+  checkFilesExist, renameFile, renameFolder, deleteFolder, deleteAllFiles
 } from './services/storage';
 import type { KbEntry } from './services/storage';
 
@@ -198,6 +198,20 @@ app.get('/api/files/:id/download', async (req, res) => {
         res.status(500).json({ error: err.message });
       }
     });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/files/:id/rename
+app.put('/api/files/:id/rename', async (req, res) => {
+  try {
+    const id = req.params.id as string;
+    const { newName } = req.body;
+    if (!newName) return res.status(400).json({ error: 'newName is required' });
+    const filePath = decodeURIComponent(id);
+    const newPath = await renameFile(filePath, newName);
+    res.json({ success: true, newPath });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

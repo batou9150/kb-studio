@@ -144,6 +144,17 @@ function App() {
     }
   };
 
+  const handleRenameFile = async (id: string, newName: string) => {
+    try {
+      await api.renameFile(id, newName);
+      setIsPanelOpen(false);
+      setSelectedFile(null);
+      loadData();
+    } catch (err) {
+      alert('Erreur lors du renommage.');
+    }
+  };
+
   const handleDownloadFile = (id: string) => {
     window.open(api.getDownloadUrl(id), '_blank');
   };
@@ -217,6 +228,7 @@ function App() {
               onUpload={handleUpload}
               onDeleteFile={handleDeleteFile}
               onDownloadFile={handleDownloadFile}
+              onRenameFile={handleRenameFile}
               onCreateFolder={handleCreateFolder}
             />
           )}
@@ -226,6 +238,7 @@ function App() {
             isOpen={isPanelOpen}
             onClose={() => setIsPanelOpen(false)}
             onUpdateMetadata={handleUpdateMetadata}
+            onRenameFile={handleRenameFile}
           />
         </div>
       )}

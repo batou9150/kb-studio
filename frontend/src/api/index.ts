@@ -70,6 +70,10 @@ export const api = {
   getDownloadUrl: (id: string): string => {
     return `${API_BASE_URL}/files/${encodeURIComponent(id)}/download`;
   },
+  renameFile: async (id: string, newName: string) => {
+    const res = await apiClient.put(`/files/${encodeURIComponent(id)}/rename`, { newName });
+    return res.data;
+  },
   moveFile: async (id: string, newFolderId: string) => {
     const res = await apiClient.put(`/files/${encodeURIComponent(id)}/move`, { newFolderId });
     return res.data;

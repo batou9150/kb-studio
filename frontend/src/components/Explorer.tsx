@@ -1,7 +1,7 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import type { FileItem } from '../types';
-import { FileText, Image, File as FileIcon, Trash2, Download, FolderPlus, Upload, Folder } from 'lucide-react';
+import { FileText, Image, File as FileIcon, Trash2, Download, FolderPlus, Upload, Folder, Pencil, Check, X } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface ExplorerProps {
@@ -11,15 +11,35 @@ interface ExplorerProps {
   onUpload: (files: File[]) => void;
   onDeleteFile: (id: string) => void;
   onDownloadFile: (id: string) => void;
+  onRenameFile: (id: string, newName: string) => void;
   onCreateFolder: () => void;
 }
 
 export const Explorer: React.FC<ExplorerProps> = ({ 
-  files, selectedFile, onSelectFile, onUpload, onDeleteFile, onDownloadFile, onCreateFolder 
+  files, selectedFile, onSelectFile, onUpload, onDeleteFile, onDownloadFile, onRenameFile, onCreateFolder
 }) => {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
+
   const onDrop = useCallback((acceptedFiles: File[]) => {
     onUpload(acceptedFiles);
   }, [onUpload]);
+
+  const startEditing = (file: FileItem) => {
+    setEditingId(file.id);
+    setEditingName(file.name);
+  };
+
+  const confirmEditing = (file: FileItem) => {
+    if (editingName && editingName !== file.name) {
+      onRenameFile(file.id, editingName);
+    }
+    setEditingId(null);
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+  };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, noClick: true });
 
@@ -111,9 +131,40 @@ export const Explorer: React.FC<ExplorerProps> = ({
                     </div>
                   </td>
                   <td>
-                    <div className="file-name-cell">
+                    <div className="file-name-cell" onClick={(e) => editingId === file.id && e.stopPropagation()}>
                       {getFileIcon(file.contentType)}
-                      {file.name}
+                      {editingId === file.id ? (
+                        <>
+                          <input
+                            className="form-control"
+                            style={{ padding: '2px 8px', fontSize: '0.9rem', flex: 1 }}
+                            value={editingName}
+                            onChange={(e) => setEditingName(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') confirmEditing(file);
+                              else if (e.key === 'Escape') cancelEditing();
+                            }}
+                            autoFocus
+                          />
+                          <button className="icon-btn" title="Valider" onClick={(e) => { e.stopPropagation(); confirmEditing(file); }}>
+                            <Check size={14} />
+                          </button>
+                          <button className="icon-btn" title="Annuler" onClick={(e) => { e.stopPropagation(); cancelEditing(); }}>
+                            <X size={14} />
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          {file.name}
+                          <button
+                            className="icon-btn"
+                            title="Renommer"
+                            onClick={(e) => { e.stopPropagation(); startEditing(file); }}
+                          >
+                            <Pencil size={14} />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                   <td>{file.metadata?.structData?.date_valeur || '-'}</td>
