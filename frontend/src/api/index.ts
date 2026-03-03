@@ -36,7 +36,7 @@ export const api = {
     const relativePaths = files.map(f => {
       // webkitRelativePath is set by <input webkitdirectory>
       // path is set by file-selector (react-dropzone) on folder drops
-      const rp = (f.webkitRelativePath || (f as any).path || '').replace(/^\//, '');
+      const rp = (f.webkitRelativePath || (f as any).path || '').replace(/^\.?\//, '');
       // Extract the directory portion (strip the filename)
       const lastSlash = rp.lastIndexOf('/');
       return lastSlash > -1 ? rp.substring(0, lastSlash) : '';

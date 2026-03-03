@@ -152,6 +152,13 @@ body {
   font-weight: 500;
 }
 
+.folder-item.drag-over {
+  background-color: #dbeafe;
+  outline: 2px solid var(--primary-color);
+  outline-offset: -2px;
+  border-radius: 6px;
+}
+
 /* Explorer */
 .explorer {
   flex: 1;
@@ -262,7 +269,7 @@ body {
 }
 
 .file-row {
-  cursor: pointer;
+  cursor: grab;
   transition: background-color 0.1s;
 }
 

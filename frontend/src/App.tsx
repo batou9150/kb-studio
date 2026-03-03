@@ -23,6 +23,7 @@ function App() {
 
   // Duplicate detection state
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [pendingFolder, setPendingFolder] = useState<string>('');
   const [duplicateNames, setDuplicateNames] = useState<string[]>([]);
 
   const loadData = useCallback(async () => {
@@ -65,22 +66,23 @@ function App() {
     }
   };
 
-  const handleUpload = async (uploadFiles: File[]) => {
+  const handleUploadToFolder = async (uploadFiles: File[], targetFolder: string) => {
     try {
       // Check for duplicates before uploading
       const fileNames = uploadFiles.map(f => f.name);
       const { duplicates } = await api.checkDuplicates(fileNames);
 
       if (duplicates.length > 0) {
-        // Store pending files and show dialog
+        // Store pending files and target folder, show dialog
         setPendingFiles(uploadFiles);
+        setPendingFolder(targetFolder);
         setDuplicateNames(duplicates);
         return;
       }
 
       // No duplicates — upload directly
       setLoading(true);
-      await api.uploadFiles(uploadFiles, currentFolder);
+      await api.uploadFiles(uploadFiles, targetFolder);
       await loadData();
     } catch (err) {
       alert('Erreur lors du téléversement.');
@@ -89,10 +91,14 @@ function App() {
     }
   };
 
+  const handleUpload = (uploadFiles: File[]) => handleUploadToFolder(uploadFiles, currentFolder);
+
   const handleDuplicateOverwrite = async () => {
     const filesToUpload = pendingFiles;
+    const targetFolder = pendingFolder;
     const duplicates = new Set(duplicateNames);
     setPendingFiles([]);
+    setPendingFolder('');
     setDuplicateNames([]);
 
     try {
@@ -104,13 +110,13 @@ function App() {
 
       // Upload new files in batch
       if (newFiles.length > 0) {
-        await api.uploadFiles(newFiles, currentFolder);
+        await api.uploadFiles(newFiles, targetFolder);
       }
 
       // Overwrite existing files one by one via PUT
       for (const file of existingFiles) {
-        const filePath = currentFolder
-          ? `${currentFolder.endsWith('/') ? currentFolder : currentFolder + '/'}${file.name}`
+        const filePath = targetFolder
+          ? `${targetFolder.endsWith('/') ? targetFolder : targetFolder + '/'}${file.name}`
           : file.name;
         const id = encodeURIComponent(filePath);
         await api.updateFile(id, file);
@@ -126,6 +132,7 @@ function App() {
 
   const handleDuplicateCancel = () => {
     setPendingFiles([]);
+    setPendingFolder('');
     setDuplicateNames([]);
   };
 
@@ -172,17 +179,14 @@ function App() {
     }
   };
 
-  const handleMoveFile = async (id: string) => {
-    const newFolderId = prompt('Entrez le chemin du dossier cible (ex: RH/Contrats/):', currentFolder);
-    if (newFolderId !== null) {
-      try {
-        await api.moveFile(id, newFolderId);
-        setIsPanelOpen(false);
-        setSelectedFile(null);
-        loadData();
-      } catch (err) {
-        alert('Erreur lors du déplacement.');
-      }
+  const handleMoveFile = async (fileId: string, newFolderId: string) => {
+    try {
+      await api.moveFile(fileId, newFolderId);
+      setIsPanelOpen(false);
+      setSelectedFile(null);
+      loadData();
+    } catch (err) {
+      alert('Erreur lors du déplacement.');
     }
   };
 
@@ -214,6 +218,8 @@ function App() {
             folders={folders}
             currentFolder={currentFolder}
             onSelectFolder={handleSelectFolder}
+            onMoveFile={handleMoveFile}
+            onUploadToFolder={handleUploadToFolder}
           />
 
           {loading && files.length === 0 ? (
