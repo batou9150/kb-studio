@@ -32,7 +32,7 @@ export const DetailsPanel: React.FC<DetailsPanelProps> = ({
   useEffect(() => {
     if (file) {
       setDescription(file.metadata?.structData?.description || '');
-      setDate(file.metadata?.structData?.date_valeur || '');
+      setDate(file.metadata?.structData?.value_date || '');
       setFileName(file.name);
       setEditingName(false);
 
@@ -136,10 +136,10 @@ export const DetailsPanel: React.FC<DetailsPanelProps> = ({
         <h3 style={{ fontSize: '1.1rem', marginBottom: '16px' }}>Métadonnées (Gemini)</h3>
 
         <div className="form-group">
-          <label htmlFor="date_valeur">Date de valeur</label>
+          <label htmlFor="value_date">Date de valeur</label>
           <input 
             type="date" 
-            id="date_valeur" 
+            id="value_date" 
             className="form-control" 
             value={date} 
             onChange={(e) => setDate(e.target.value)}

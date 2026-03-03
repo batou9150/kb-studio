@@ -6,7 +6,7 @@ import {
   initStorage, getFolders, createFolder, getFiles, uploadFile,
   getFileStream, deleteFile, moveFile, appendKbEntries, updateKbEntry, getKbMetadata,
   checkFilesExist, renameFile, renameFolder, deleteFolder, deleteAllFiles,
-  extractDateValeur, resolveFilePath
+  extractValueDate, resolveFilePath
 } from './services/storage';
 import type { KbEntry } from './services/storage';
 
@@ -115,7 +115,7 @@ app.post('/api/files', upload.array('files'), async (req, res) => {
         structData: {
           title: file.originalname,
           description: '',
-          date_valeur: extractDateValeur(file.originalname),
+          value_date: extractValueDate(file.originalname),
         },
         content: {
           mimeType: file.mimetype,
@@ -156,10 +156,10 @@ app.put('/api/files/:id', upload.single('file'), async (req, res) => {
 // PATCH /api/files/:id
 app.patch('/api/files/:id', async (req, res) => {
   try {
-    const { description, date_valeur } = req.body;
+    const { description, value_date } = req.body;
     const id = req.params.id as string;
     
-    const updated = await updateKbEntry(id, { description, date_valeur });
+    const updated = await updateKbEntry(id, { description, value_date });
     res.json(updated);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
