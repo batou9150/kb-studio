@@ -19,7 +19,7 @@ export const api = {
   },
   
   // Files
-  checkDuplicates: async (fileNames: string[]): Promise<{ duplicates: string[] }> => {
+  checkDuplicates: async (fileNames: string[]): Promise<{ duplicates: {name: string, id: string}[] }> => {
     const res = await apiClient.post('/files/check-duplicates', { fileNames });
     return res.data;
   },
@@ -89,5 +89,14 @@ export const api = {
   deleteAllFiles: async () => {
     const res = await apiClient.delete('/files');
     return res.data;
-  }
+  },
+  getPreviewUrl: (id: string): string => {
+    return `${API_BASE_URL}/files/${encodeURIComponent(id)}/preview`;
+  },
+  getTextContent: async (id: string): Promise<string> => {
+    const res = await apiClient.get(`/files/${encodeURIComponent(id)}/download`, {
+      responseType: 'text',
+    });
+    return res.data;
+  },
 };

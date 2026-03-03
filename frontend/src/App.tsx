@@ -24,7 +24,7 @@ function App() {
   // Duplicate detection state
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [pendingFolder, setPendingFolder] = useState<string>('');
-  const [duplicateNames, setDuplicateNames] = useState<string[]>([]);
+  const [duplicates, setDuplicates] = useState<{name: string, id: string}[]>([]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -76,7 +76,7 @@ function App() {
         // Store pending files and target folder, show dialog
         setPendingFiles(uploadFiles);
         setPendingFolder(targetFolder);
-        setDuplicateNames(duplicates);
+        setDuplicates(duplicates);
         return;
       }
 
@@ -96,29 +96,26 @@ function App() {
   const handleDuplicateOverwrite = async () => {
     const filesToUpload = pendingFiles;
     const targetFolder = pendingFolder;
-    const duplicates = new Set(duplicateNames);
+    const nameToId = new Map(duplicates.map(d => [d.name, d.id]));
     setPendingFiles([]);
     setPendingFolder('');
-    setDuplicateNames([]);
+    setDuplicates([]);
 
     try {
       setLoading(true);
 
       // Split into new files and existing files to overwrite
-      const newFiles = filesToUpload.filter(f => !duplicates.has(f.name));
-      const existingFiles = filesToUpload.filter(f => duplicates.has(f.name));
+      const newFiles = filesToUpload.filter(f => !nameToId.has(f.name));
+      const existingFiles = filesToUpload.filter(f => nameToId.has(f.name));
 
       // Upload new files in batch
       if (newFiles.length > 0) {
         await api.uploadFiles(newFiles, targetFolder);
       }
 
-      // Overwrite existing files one by one via PUT
+      // Overwrite existing files one by one via PUT using UUID
       for (const file of existingFiles) {
-        const filePath = targetFolder
-          ? `${targetFolder.endsWith('/') ? targetFolder : targetFolder + '/'}${file.name}`
-          : file.name;
-        const id = encodeURIComponent(filePath);
+        const id = nameToId.get(file.name)!;
         await api.updateFile(id, file);
       }
 
@@ -133,7 +130,7 @@ function App() {
   const handleDuplicateCancel = () => {
     setPendingFiles([]);
     setPendingFolder('');
-    setDuplicateNames([]);
+    setDuplicates([]);
   };
 
   const handleSelectFile = (file: FileItem) => {
@@ -192,9 +189,9 @@ function App() {
 
   return (
     <div className="app-container">
-      {duplicateNames.length > 0 && (
+      {duplicates.length > 0 && (
         <DuplicateDialog
-          duplicateNames={duplicateNames}
+          duplicates={duplicates}
           onOverwrite={handleDuplicateOverwrite}
           onCancel={handleDuplicateCancel}
         />

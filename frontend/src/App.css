@@ -358,12 +358,31 @@ body {
   background-color: var(--bg-color);
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  height: 200px;
+  min-height: 200px;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 24px;
   color: var(--text-secondary);
+  overflow: hidden;
+}
+
+.preview-box-pdf {
+  height: 400px;
+}
+
+.preview-text {
+  width: 100%;
+  max-height: 300px;
+  overflow: auto;
+  padding: 12px;
+  margin: 0;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  text-align: left;
+  align-self: flex-start;
 }
 
 .form-group {
