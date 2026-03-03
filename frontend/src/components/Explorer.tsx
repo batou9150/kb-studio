@@ -20,6 +20,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
+  const [internalDrag, setInternalDrag] = useState(false);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     onUpload(acceptedFiles);
@@ -92,14 +93,14 @@ export const Explorer: React.FC<ExplorerProps> = ({
       </div>
 
       <div className="explorer-content">
-        {isDragActive && (
+        {isDragActive && !internalDrag && (
           <div className="dropzone active">
             <Upload size={32} />
             <p style={{ marginTop: '12px', fontWeight: 500 }}>Déposez les fichiers ici pour les téléverser</p>
           </div>
         )}
 
-        {!isDragActive && files.length === 0 ? (
+        {!isDragActive && !internalDrag && files.length === 0 ? (
           <div className="empty-state">
             <FolderPlus size={48} />
             <h3>Ce dossier est vide</h3>
@@ -119,10 +120,17 @@ export const Explorer: React.FC<ExplorerProps> = ({
             </thead>
             <tbody>
               {files.map(file => (
-                <tr 
-                  key={file.id} 
+                <tr
+                  key={file.id}
                   className={`file-row ${selectedFile?.id === file.id ? 'selected' : ''}`}
                   onClick={() => onSelectFile(file)}
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData('application/kb-file-id', file.id);
+                    e.dataTransfer.effectAllowed = 'move';
+                    setInternalDrag(true);
+                  }}
+                  onDragEnd={() => setInternalDrag(false)}
                 >
                   <td>
                     <div className="file-name-cell">
