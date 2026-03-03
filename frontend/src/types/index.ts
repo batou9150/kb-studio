@@ -27,3 +27,25 @@ export interface FolderNode {
   path: string;
   children?: FolderNode[];
 }
+
+export interface DataStoreConfig {
+  dataStoreId: string;
+  displayName: string;
+  location: string;   // "global", "eu", "us"
+}
+
+export interface DataStoreStatus {
+  exists: boolean;
+  documentCount: number;
+  kbEntryCount: number;
+  kbNdjsonUpdatedAt: string | null;
+  lastImportTime: string | null;
+  isUpToDate: boolean;
+  consoleUrl: string | null;
+}
+
+export interface DataStoreDocument {
+  id: string;
+  uri: string;
+  structData: Record<string, any>;
+}

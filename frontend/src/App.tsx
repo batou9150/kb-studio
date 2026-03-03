@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import './App.css';
 import { api } from './api';
 import type { FileItem } from './types';
@@ -8,6 +8,7 @@ import { Explorer } from './components/Explorer';
 import { DetailsPanel } from './components/DetailsPanel';
 import { DuplicateDialog } from './components/DuplicateDialog';
 import { AdminPanel } from './components/AdminPanel';
+import { SearchPanel } from './components/SearchPanel';
 import { Loader } from 'lucide-react';
 
 function App() {
@@ -16,7 +17,7 @@ function App() {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   
-  const [currentView, setCurrentView] = useState<'explorer' | 'admin'>('explorer');
+  const [currentView, setCurrentView] = useState<'explorer' | 'admin' | 'search'>('explorer');
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -208,6 +209,10 @@ function App() {
       {currentView === 'admin' ? (
         <div className="main-content">
           <AdminPanel folders={folders} onDataChanged={loadData} />
+        </div>
+      ) : currentView === 'search' ? (
+        <div className="main-content">
+          <SearchPanel />
         </div>
       ) : (
         <div className="main-content">

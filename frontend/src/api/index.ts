@@ -99,4 +99,30 @@ export const api = {
     });
     return res.data;
   },
+
+  // Search / Datastore management
+  listDataStores: async (): Promise<{ dataStoreId: string; displayName: string; location: string }[]> => {
+    const res = await apiClient.get('/search/datastores');
+    return res.data;
+  },
+  createDataStore: async (dataStoreId: string, displayName: string, location: string) => {
+    const res = await apiClient.post('/search/datastores', { dataStoreId, displayName, location });
+    return res.data;
+  },
+  importDocuments: async (dataStoreId: string, location: string, mode?: string) => {
+    const res = await apiClient.post(`/search/datastores/${encodeURIComponent(dataStoreId)}/import`, { location, mode });
+    return res.data;
+  },
+  getDataStoreStatus: async (dataStoreId: string, location: string) => {
+    const res = await apiClient.get(`/search/datastores/${encodeURIComponent(dataStoreId)}/status`, { params: { location } });
+    return res.data;
+  },
+  purgeDocuments: async (dataStoreId: string, location: string) => {
+    const res = await apiClient.delete(`/search/datastores/${encodeURIComponent(dataStoreId)}/documents`, { params: { location } });
+    return res.data;
+  },
+  listDataStoreDocuments: async (dataStoreId: string, location: string, pageSize?: number, pageToken?: string) => {
+    const res = await apiClient.get(`/search/datastores/${encodeURIComponent(dataStoreId)}/documents`, { params: { location, pageSize, pageToken } });
+    return res.data;
+  },
 };
