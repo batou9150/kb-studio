@@ -6,6 +6,8 @@ import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { Explorer } from './components/Explorer';
 import { DetailsPanel } from './components/DetailsPanel';
+import { DuplicateDialog } from './components/DuplicateDialog';
+import { AdminPanel } from './components/AdminPanel';
 import { Loader } from 'lucide-react';
 
 function App() {
@@ -14,9 +16,14 @@ function App() {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   
+  const [currentView, setCurrentView] = useState<'explorer' | 'admin'>('explorer');
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Duplicate detection state
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [duplicateNames, setDuplicateNames] = useState<string[]>([]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -60,6 +67,18 @@ function App() {
 
   const handleUpload = async (uploadFiles: File[]) => {
     try {
+      // Check for duplicates before uploading
+      const fileNames = uploadFiles.map(f => f.name);
+      const { duplicates } = await api.checkDuplicates(fileNames);
+
+      if (duplicates.length > 0) {
+        // Store pending files and show dialog
+        setPendingFiles(uploadFiles);
+        setDuplicateNames(duplicates);
+        return;
+      }
+
+      // No duplicates — upload directly
       setLoading(true);
       await api.uploadFiles(uploadFiles, currentFolder);
       await loadData();
@@ -68,6 +87,46 @@ function App() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDuplicateOverwrite = async () => {
+    const filesToUpload = pendingFiles;
+    const duplicates = new Set(duplicateNames);
+    setPendingFiles([]);
+    setDuplicateNames([]);
+
+    try {
+      setLoading(true);
+
+      // Split into new files and existing files to overwrite
+      const newFiles = filesToUpload.filter(f => !duplicates.has(f.name));
+      const existingFiles = filesToUpload.filter(f => duplicates.has(f.name));
+
+      // Upload new files in batch
+      if (newFiles.length > 0) {
+        await api.uploadFiles(newFiles, currentFolder);
+      }
+
+      // Overwrite existing files one by one via PUT
+      for (const file of existingFiles) {
+        const filePath = currentFolder
+          ? `${currentFolder.endsWith('/') ? currentFolder : currentFolder + '/'}${file.name}`
+          : file.name;
+        const id = encodeURIComponent(filePath);
+        await api.updateFile(id, file);
+      }
+
+      await loadData();
+    } catch (err) {
+      alert('Erreur lors du téléversement.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDuplicateCancel = () => {
+    setPendingFiles([]);
+    setDuplicateNames([]);
   };
 
   const handleSelectFile = (file: FileItem) => {
@@ -85,13 +144,8 @@ function App() {
     }
   };
 
-  const handleDownloadFile = async (id: string) => {
-    try {
-      const { url } = await api.downloadFile(id);
-      window.open(url, '_blank');
-    } catch (err) {
-      alert('Erreur lors du téléchargement.');
-    }
+  const handleDownloadFile = (id: string) => {
+    window.open(api.getDownloadUrl(id), '_blank');
   };
 
   const handleDeleteFile = async (id: string) => {
@@ -123,45 +177,58 @@ function App() {
 
   return (
     <div className="app-container">
-      <Header 
-        currentFolder={currentFolder} 
-        onSearch={setSearchQuery} 
+      {duplicateNames.length > 0 && (
+        <DuplicateDialog
+          duplicateNames={duplicateNames}
+          onOverwrite={handleDuplicateOverwrite}
+          onCancel={handleDuplicateCancel}
+        />
+      )}
+
+      <Header
+        currentFolder={currentFolder}
+        currentView={currentView}
+        onSearch={setSearchQuery}
         onNavigate={handleSelectFolder}
+        onViewChange={setCurrentView}
       />
-      
-      <div className="main-content">
-        <Sidebar 
-          folders={folders} 
-          currentFolder={currentFolder} 
-          onSelectFolder={handleSelectFolder} 
-        />
-        
-        {loading && files.length === 0 ? (
-          <div className="explorer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Loader className="spinner" size={48} color="var(--primary-color)" />
-          </div>
-        ) : (
-          <Explorer 
-            files={files} 
-            selectedFile={selectedFile}
-            onSelectFile={handleSelectFile}
-            onUpload={handleUpload}
-            onDeleteFile={handleDeleteFile}
-            onDownloadFile={handleDownloadFile}
-            onCreateFolder={handleCreateFolder}
+
+      {currentView === 'admin' ? (
+        <div className="main-content">
+          <AdminPanel folders={folders} onDataChanged={loadData} />
+        </div>
+      ) : (
+        <div className="main-content">
+          <Sidebar
+            folders={folders}
+            currentFolder={currentFolder}
+            onSelectFolder={handleSelectFolder}
           />
-        )}
-        
-        <DetailsPanel 
-          file={selectedFile} 
-          isOpen={isPanelOpen} 
-          onClose={() => setIsPanelOpen(false)}
-          onUpdateMetadata={handleUpdateMetadata}
-          onDownload={handleDownloadFile}
-          onDelete={handleDeleteFile}
-          onMove={handleMoveFile}
-        />
-      </div>
+
+          {loading && files.length === 0 ? (
+            <div className="explorer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Loader className="spinner" size={48} color="var(--primary-color)" />
+            </div>
+          ) : (
+            <Explorer
+              files={files}
+              selectedFile={selectedFile}
+              onSelectFile={handleSelectFile}
+              onUpload={handleUpload}
+              onDeleteFile={handleDeleteFile}
+              onDownloadFile={handleDownloadFile}
+              onCreateFolder={handleCreateFolder}
+            />
+          )}
+
+          <DetailsPanel
+            file={selectedFile}
+            isOpen={isPanelOpen}
+            onClose={() => setIsPanelOpen(false)}
+            onUpdateMetadata={handleUpdateMetadata}
+          />
+        </div>
+      )}
     </div>
   );
 }

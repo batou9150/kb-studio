@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import type { FileItem } from '../types';
-import { FileText, Image, File as FileIcon, Trash2, Download, MoreVertical, FolderPlus, Upload } from 'lucide-react';
+import { FileText, Image, File as FileIcon, Trash2, Download, FolderPlus, Upload, Folder } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface ExplorerProps {
@@ -38,15 +38,30 @@ export const Explorer: React.FC<ExplorerProps> = ({
           <button className="btn btn-primary" onClick={() => document.getElementById('file-upload')?.click()}>
             <Upload size={16} />
             Téléverser
-            <input 
-              id="file-upload" 
-              type="file" 
-              multiple 
-              style={{ display: 'none' }} 
+            <input
+              id="file-upload"
+              type="file"
+              multiple
+              style={{ display: 'none' }}
               onChange={(e) => {
                 if (e.target.files) onUpload(Array.from(e.target.files));
                 e.target.value = '';
-              }} 
+              }}
+            />
+          </button>
+          <button className="btn btn-outline" style={{ marginLeft: '12px' }} onClick={() => document.getElementById('folder-upload')?.click()}>
+            <Folder size={16} />
+            Téléverser un dossier
+            <input
+              id="folder-upload"
+              type="file"
+              // @ts-expect-error webkitdirectory is not in the type definitions
+              webkitdirectory=""
+              style={{ display: 'none' }}
+              onChange={(e) => {
+                if (e.target.files) onUpload(Array.from(e.target.files));
+                e.target.value = '';
+              }}
             />
           </button>
           <button className="btn btn-outline" style={{ marginLeft: '12px' }} onClick={onCreateFolder}>
@@ -74,6 +89,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
           <table className="file-table">
             <thead>
               <tr>
+                <th>Dossier</th>
                 <th>Nom</th>
                 <th>Date de valeur</th>
                 <th>Description</th>
@@ -88,6 +104,12 @@ export const Explorer: React.FC<ExplorerProps> = ({
                   className={`file-row ${selectedFile?.id === file.id ? 'selected' : ''}`}
                   onClick={() => onSelectFile(file)}
                 >
+                  <td>
+                    <div className="file-name-cell">
+                      <Folder size={18} color="var(--text-secondary)" />
+                      {file.path.includes('/') ? file.path.substring(0, file.path.lastIndexOf('/')) : '/'}
+                    </div>
+                  </td>
                   <td>
                     <div className="file-name-cell">
                       {getFileIcon(file.contentType)}

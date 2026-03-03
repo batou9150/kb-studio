@@ -45,7 +45,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ folders, currentFolder, onSele
             {isSelected ? <FolderOpen size={18} /> : <Folder size={18} />}
             {node.name}
           </div>
-          {isSelected && node.children && node.children.length > 0 && (
+          {node.children && node.children.length > 0 && (
             <div>{renderTree(node.children, level + 1)}</div>
           )}
         </div>
