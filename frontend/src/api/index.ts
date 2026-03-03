@@ -59,8 +59,8 @@ export const api = {
     });
     return res.data;
   },
-  updateFileMetadata: async (id: string, description: string, date_valeur: string) => {
-    const res = await apiClient.patch(`/files/${encodeURIComponent(id)}`, { description, date_valeur });
+  updateFileMetadata: async (id: string, description: string, value_date: string) => {
+    const res = await apiClient.patch(`/files/${encodeURIComponent(id)}`, { description, value_date });
     return res.data;
   },
   deleteFile: async (id: string) => {

@@ -27,7 +27,7 @@ export interface KbEntry {
   structData: {
     title: string;
     description: string;
-    date_valeur: string;
+    value_date: string;
   };
   content: {
     mimeType: string;
@@ -288,7 +288,7 @@ export const deleteFolder = async (folderPath: string) => {
   }
 };
 
-export function extractDateValeur(filename: string): string {
+export function extractValueDate(filename: string): string {
   // Strip extension
   const name = filename.replace(/\.[^.]+$/, '');
 

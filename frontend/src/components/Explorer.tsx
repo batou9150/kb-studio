@@ -175,7 +175,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
                       )}
                     </div>
                   </td>
-                  <td>{file.metadata?.structData?.date_valeur || '-'}</td>
+                  <td>{file.metadata?.structData?.value_date || '-'}</td>
                   <td>
                     <div style={{ maxWidth: '300px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {file.metadata?.structData?.description || '-'}

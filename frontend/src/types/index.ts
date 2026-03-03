@@ -3,7 +3,7 @@ export interface Metadata {
   structData: {
     title: string;
     description: string;
-    date_valeur: string;
+    value_date: string;
   };
   content: {
     mimeType: string;
