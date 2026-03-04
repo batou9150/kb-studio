@@ -199,9 +199,7 @@ function App() {
       )}
 
       <Header
-        currentFolder={currentFolder}
         currentView={currentView}
-        onSearch={setSearchQuery}
         onNavigate={handleSelectFolder}
         onViewChange={setCurrentView}
       />
@@ -238,6 +236,7 @@ function App() {
               onDownloadFile={handleDownloadFile}
               onRenameFile={handleRenameFile}
               onCreateFolder={handleCreateFolder}
+              onSearch={setSearchQuery}
             />
           )}
 

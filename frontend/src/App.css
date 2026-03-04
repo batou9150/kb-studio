@@ -63,22 +63,6 @@ body {
   gap: 8px;
 }
 
-.breadcrumbs {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-}
-
-.breadcrumb-item {
-  cursor: pointer;
-}
-
-.breadcrumb-item:hover {
-  color: var(--primary-color);
-}
-
 .search-bar {
   display: flex;
   align-items: center;
