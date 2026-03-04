@@ -1,5 +1,5 @@
 import React from 'react';
-import { Database, Settings, Globe } from 'lucide-react';
+import { Database, FolderOpen, Globe, Settings } from 'lucide-react';
 
 interface HeaderProps {
   currentView: 'explorer' | 'admin' | 'search';
@@ -17,22 +17,29 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, onViewC
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <nav className="header-tabs">
         <button
-          className={`icon-btn ${currentView === 'search' ? 'active' : ''}`}
-          title="Vertex AI Search"
-          onClick={() => onViewChange(currentView === 'search' ? 'explorer' : 'search')}
+          className={`header-tab ${currentView === 'explorer' ? 'active' : ''}`}
+          onClick={() => { onNavigate(''); onViewChange('explorer'); }}
         >
-          <Globe size={20} />
+          <FolderOpen size={16} />
+          Knowledge Base
         </button>
         <button
-          className={`icon-btn ${currentView === 'admin' ? 'active' : ''}`}
-          title="Administration"
-          onClick={() => onViewChange(currentView === 'admin' ? 'explorer' : 'admin')}
+          className={`header-tab ${currentView === 'search' ? 'active' : ''}`}
+          onClick={() => onViewChange('search')}
         >
-          <Settings size={20} />
+          <Globe size={16} />
+          Vertex AI Search
         </button>
-      </div>
+        <button
+          className={`header-tab ${currentView === 'admin' ? 'active' : ''}`}
+          onClick={() => onViewChange('admin')}
+        >
+          <Settings size={16} />
+          Administration
+        </button>
+      </nav>
     </header>
   );
 };
