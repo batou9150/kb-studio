@@ -323,9 +323,9 @@ app.get('/api/search/datastores', async (req, res) => {
 // POST /api/search/datastores — Create datastore
 app.post('/api/search/datastores', async (req, res) => {
   try {
-    const { dataStoreId, displayName, location = 'global', documentProcessingConfig } = req.body;
+    const { dataStoreId, displayName, location = 'global', documentProcessingConfig, appConfig } = req.body;
     if (!dataStoreId || !displayName) return res.status(400).json({ error: 'dataStoreId and displayName are required' });
-    const result = await searchCreateDataStore(dataStoreId, displayName, location, documentProcessingConfig);
+    const result = await searchCreateDataStore(dataStoreId, displayName, location, documentProcessingConfig, appConfig);
     res.json(result);
   } catch (err: any) {
     res.status(500).json({ error: err.message });

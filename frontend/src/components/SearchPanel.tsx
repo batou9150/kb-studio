@@ -26,6 +26,11 @@ export const SearchPanel: React.FC = () => {
   const [newDisplayName, setNewDisplayName] = useState('');
   const [newLocation, setNewLocation] = useState('global');
 
+  // App (engine) config
+  const [createApp, setCreateApp] = useState(true);
+  const [appSearchTier, setAppSearchTier] = useState<'standard' | 'enterprise'>('enterprise');
+  const [appEnableLlm, setAppEnableLlm] = useState(true);
+
   // Advanced options
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [defaultParser, setDefaultParser] = useState<'digital' | 'ocr' | 'layout'>('digital');
@@ -216,7 +221,8 @@ export const SearchPanel: React.FC = () => {
           };
         }
       }
-      await api.createDataStore(newId, newDisplayName, newLocation, documentProcessingConfig);
+      const appConfigParam = createApp ? { searchTier: appSearchTier, enableLlm: appEnableLlm } : undefined;
+      await api.createDataStore(newId, newDisplayName, newLocation, documentProcessingConfig, appConfigParam);
       await fetchDataStores();
       setDataStoreId(newId);
       setLocation(newLocation);
@@ -231,6 +237,9 @@ export const SearchPanel: React.FC = () => {
       setEnableChunking(false);
       setChunkSize(500);
       setIncludeAncestorHeadings(false);
+      setCreateApp(true);
+      setAppSearchTier('enterprise');
+      setAppEnableLlm(true);
     } catch (err: any) {
       setError(err.response?.data?.error || err.message);
     } finally {
@@ -426,6 +435,34 @@ export const SearchPanel: React.FC = () => {
                         <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
                           <input type="checkbox" checked={includeAncestorHeadings} onChange={e => setIncludeAncestorHeadings(e.target.checked)} />
                           Inclure les titres parents
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                </fieldset>
+
+                {/* App (engine) config */}
+                <fieldset style={{ flex: 1, minWidth: 220, border: '1px solid var(--border-color)', borderRadius: 6, padding: '12px 16px' }}>
+                  <legend style={{ fontSize: '0.85rem', fontWeight: 600, padding: '0 4px' }}>Application Search</legend>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                      <input type="checkbox" checked={createApp} onChange={e => setCreateApp(e.target.checked)} />
+                      Créer une application Search
+                    </label>
+                    {createApp && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginLeft: 20 }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>Niveau de recherche</span>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                            <input type="radio" name="searchTier" checked={appSearchTier === 'standard'} onChange={() => setAppSearchTier('standard')} /> Standard
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                            <input type="radio" name="searchTier" checked={appSearchTier === 'enterprise'} onChange={() => setAppSearchTier('enterprise')} /> Enterprise
+                          </label>
+                        </div>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                          <input type="checkbox" checked={appEnableLlm} onChange={e => setAppEnableLlm(e.target.checked)} />
+                          Activer le LLM (recherche IA)
                         </label>
                       </div>
                     )}
