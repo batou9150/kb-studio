@@ -19,6 +19,7 @@ import {
   purgeDocuments as searchPurgeDocuments,
   listDocuments as searchListDocuments,
   answerQuery as searchAnswerQuery,
+  deleteDataStore as searchDeleteDataStore,
 } from './services/search';
 
 
@@ -401,6 +402,18 @@ app.get('/api/search/datastores/:id/documents', async (req, res) => {
     const pageToken = (req.query.pageToken as string) || undefined;
     const result = await searchListDocuments(dataStoreId, location, pageSize, pageToken);
     res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/search/datastores/:id — Delete engine + datastore
+app.delete('/api/search/datastores/:id', async (req, res) => {
+  try {
+    const dataStoreId = req.params.id as string;
+    const location = (req.query.location as string) || 'global';
+    await searchDeleteDataStore(dataStoreId, location);
+    res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
