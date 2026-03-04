@@ -10,6 +10,9 @@ const bucketName = process.env.GCS_BUCKET_NAME || 'kb-studio-bucket';
 const bucket = storage.bucket(bucketName);
 const kbJsonFile = 'kb.ndjson';
 
+let lastReconcileTime = 0;
+const RECONCILE_DEBOUNCE_MS = 5000;
+
 /** Strip the gs://bucket/ prefix to get the GCS object path */
 export const pathFromUri = (uri: string): string =>
   uri.replace(`gs://${bucketName}/`, '');
@@ -71,7 +74,57 @@ export const createFolder = async (folderPath: string) => {
   return { success: true };
 };
 
+async function reconcileKbMetadata(): Promise<void> {
+  const [kbExists] = await bucket.file(kbJsonFile).exists();
+  const now = Date.now();
+  if (kbExists && now - lastReconcileTime < RECONCILE_DEBOUNCE_MS) return;
+  lastReconcileTime = now;
+
+  const [allFiles] = await bucket.getFiles();
+  const bucketPaths = new Set(
+    allFiles
+      .filter(f => !f.name.endsWith('/') && f.name !== kbJsonFile)
+      .map(f => f.name)
+  );
+
+  const metadata = await getKbMetadata();
+  const knownPaths = new Set(metadata.map(m => pathFromUri(m.content.uri)));
+
+  // Detect orphan files (in bucket but not in kb.ndjson)
+  const newEntries: KbEntry[] = [];
+  for (const file of allFiles) {
+    if (file.name.endsWith('/') || file.name === kbJsonFile) continue;
+    if (knownPaths.has(file.name)) continue;
+
+    const fileName = file.name.split('/').pop() || file.name;
+    newEntries.push({
+      id: uuidv4(),
+      structData: {
+        title: fileName,
+        description: '',
+        value_date: extractValueDate(fileName),
+      },
+      content: {
+        mimeType: file.metadata.contentType || 'application/octet-stream',
+        uri: `gs://${bucketName}/${file.name}`,
+      },
+    });
+  }
+
+  // Detect stale entries (in kb.ndjson but not in bucket)
+  const filtered = metadata.filter(m => bucketPaths.has(pathFromUri(m.content.uri)));
+
+  const hasNew = newEntries.length > 0;
+  const hasStale = filtered.length < metadata.length;
+
+  if (hasNew || hasStale) {
+    await saveKbMetadata([...filtered, ...newEntries]);
+  }
+}
+
 export const getFiles = async (folderId?: string): Promise<any[]> => {
+  await reconcileKbMetadata();
+
   const options: any = {};
   if (folderId) {
     options.prefix = folderId.endsWith('/') ? folderId : folderId + '/';
