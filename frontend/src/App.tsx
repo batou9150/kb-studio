@@ -220,6 +220,7 @@ function App() {
             onSelectFolder={handleSelectFolder}
             onMoveFile={handleMoveFile}
             onUploadToFolder={handleUploadToFolder}
+            onCreateFolder={handleCreateFolder}
           />
 
           {loading && files.length === 0 ? (
@@ -235,7 +236,6 @@ function App() {
               onDeleteFile={handleDeleteFile}
               onDownloadFile={handleDownloadFile}
               onRenameFile={handleRenameFile}
-              onCreateFolder={handleCreateFolder}
               onSearch={setSearchQuery}
             />
           )}
