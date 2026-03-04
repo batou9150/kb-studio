@@ -44,7 +44,7 @@ body {
   display: flex;
   align-items: center;
   padding: 0 24px;
-  justify-content: space-between;
+  gap: 32px;
   flex-shrink: 0;
 }
 
@@ -587,6 +587,47 @@ textarea.form-control {
 .admin-section-header h2 {
   font-size: 1.1rem;
   font-weight: 600;
+}
+
+/* Header Tabs */
+.header-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  height: 100%;
+  flex: 1;
+}
+
+.header-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 16px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: color 0.2s;
+  white-space: nowrap;
+}
+
+.header-tab:focus {
+  outline: none;
+}
+
+.header-tab:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-color);
+}
+
+.header-tab:last-child {
+  margin-left: auto;
+}
+
+.header-tab.active {
+  color: var(--primary-color);
 }
 
 .icon-btn.active {
