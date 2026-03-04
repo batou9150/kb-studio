@@ -17,7 +17,7 @@ function App() {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   
-  const [currentView, setCurrentView] = useState<'explorer' | 'admin' | 'search'>('explorer');
+  const [currentView, setCurrentView] = useState<'explorer' | 'admin' | 'index'>('explorer');
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -208,7 +208,7 @@ function App() {
         <div className="main-content">
           <AdminPanel folders={folders} onDataChanged={loadData} />
         </div>
-      ) : currentView === 'search' ? (
+      ) : currentView === 'index' ? (
         <div className="main-content">
           <SearchPanel />
         </div>

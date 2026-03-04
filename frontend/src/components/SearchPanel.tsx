@@ -266,10 +266,10 @@ export const SearchPanel: React.FC = () => {
   const selectedKey = dataStoreId ? `${location}/${dataStoreId}` : '';
 
   return (
-    <div className="admin-panel">
+    <div className="vais-panel">
       {/* Datastore selection */}
-      <div className="admin-section">
-        <div className="admin-section-header">
+      <div className="vais-section">
+        <div className="vais-section-header">
           <h2>Datastore</h2>
           {status?.consoleUrl && !showCreateForm && (
             <a className="btn btn-outline" href={status.consoleUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.85rem', padding: '4px 12px' }}>
@@ -419,15 +419,15 @@ export const SearchPanel: React.FC = () => {
       </div>
 
       {error && (
-        <div style={{ padding: '12px 16px', background: '#fef2f2', border: '1px solid var(--danger-color)', borderRadius: 6, marginBottom: 24, color: 'var(--danger-color)', fontSize: '0.9rem' }}>
+        <div style={{ padding: '12px 16px', background: '#fef2f2', border: '1px solid var(--danger-color)', borderRadius: 6, marginBottom: 24, color: 'var(--danger-color)', fontSize: '0.9rem', maxWidth: 1000, marginLeft: 'auto', marginRight: 'auto' }}>
           {error}
         </div>
       )}
 
       {/* Status */}
       {dataStoreId && (
-        <div className="admin-section">
-          <div className="admin-section-header">
+        <div className="vais-section">
+          <div className="vais-section-header">
             <h2>Statut</h2>
             <button className="icon-btn" title="Rafraîchir" onClick={fetchStatus} disabled={loading}>
               <RefreshCw size={18} className={loading ? 'spinner' : ''} />
@@ -473,8 +473,8 @@ export const SearchPanel: React.FC = () => {
 
       {/* Import */}
       {status?.exists && (
-        <div className="admin-section">
-          <div className="admin-section-header">
+        <div className="vais-section">
+          <div className="vais-section-header">
             <h2>Import</h2>
           </div>
           <div style={{ display: 'flex', gap: 12 }}>
@@ -564,8 +564,8 @@ export const SearchPanel: React.FC = () => {
 
       {/* Documents */}
       {status?.exists && (
-        <div className="admin-section">
-          <div className="admin-section-header">
+        <div className="vais-section">
+          <div className="vais-section-header">
             <h2>Documents ({status.documentCount})</h2>
             <button className="icon-btn" title="Rafraîchir" onClick={() => fetchDocuments()}>
               <RefreshCw size={18} />
