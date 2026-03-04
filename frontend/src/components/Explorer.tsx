@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import type { FileItem } from '../types';
-import { FileText, Image, File as FileIcon, Trash2, Download, FolderPlus, ArrowUpFromLine, FileUp, FolderUp, Folder, Pencil, Check, X, Search, ChevronDown } from 'lucide-react';
+import { FileText, Image, File as FileIcon, Trash2, Download, FolderPlus, ArrowUpFromLine, FileUp, FolderUp, Folder, Pencil, Check, X, Search, ChevronDown, Upload } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface ExplorerProps {
