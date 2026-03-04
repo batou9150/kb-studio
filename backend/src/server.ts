@@ -18,6 +18,7 @@ import {
   getDataStoreStatus as searchGetDataStoreStatus,
   purgeDocuments as searchPurgeDocuments,
   listDocuments as searchListDocuments,
+  answerQuery as searchAnswerQuery,
 } from './services/search';
 
 
@@ -399,6 +400,19 @@ app.get('/api/search/datastores/:id/documents', async (req, res) => {
     const pageSize = parseInt(req.query.pageSize as string) || 20;
     const pageToken = (req.query.pageToken as string) || undefined;
     const result = await searchListDocuments(dataStoreId, location, pageSize, pageToken);
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/search/datastores/:id/answer — Answer query using serving config
+app.post('/api/search/datastores/:id/answer', async (req, res) => {
+  try {
+    const dataStoreId = req.params.id as string;
+    const { location = 'global', query } = req.body;
+    if (!query) return res.status(400).json({ error: 'query is required' });
+    const result = await searchAnswerQuery(dataStoreId, location, query);
     res.json(result);
   } catch (err: any) {
     res.status(500).json({ error: err.message });

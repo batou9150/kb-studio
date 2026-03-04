@@ -9,6 +9,7 @@ import { DetailsPanel } from './components/DetailsPanel';
 import { DuplicateDialog } from './components/DuplicateDialog';
 import { AdminPanel } from './components/AdminPanel';
 import { SearchPanel } from './components/SearchPanel';
+import { AnswerPanel } from './components/AnswerPanel';
 import { Loader } from 'lucide-react';
 
 function App() {
@@ -17,7 +18,7 @@ function App() {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   
-  const [currentView, setCurrentView] = useState<'explorer' | 'admin' | 'index'>('explorer');
+  const [currentView, setCurrentView] = useState<'explorer' | 'admin' | 'index' | 'answer'>('explorer');
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -211,6 +212,10 @@ function App() {
       ) : currentView === 'index' ? (
         <div className="main-content">
           <SearchPanel />
+        </div>
+      ) : currentView === 'answer' ? (
+        <div className="main-content">
+          <AnswerPanel />
         </div>
       ) : (
         <div className="main-content">
