@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import type { FileItem } from '../types';
-import { FileText, Image, File as FileIcon, Trash2, Download, FolderPlus, Upload, Folder, Pencil, Check, X, Search } from 'lucide-react';
+import { FileText, Image, File as FileIcon, Trash2, Download, FolderPlus, ArrowUpFromLine, FileUp, FolderUp, Folder, Pencil, Check, X, Search, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface ExplorerProps {
@@ -12,16 +12,16 @@ interface ExplorerProps {
   onDeleteFile: (id: string) => void;
   onDownloadFile: (id: string) => void;
   onRenameFile: (id: string, newName: string) => void;
-  onCreateFolder: () => void;
   onSearch: (query: string) => void;
 }
 
 export const Explorer: React.FC<ExplorerProps> = ({ 
-  files, selectedFile, onSelectFile, onUpload, onDeleteFile, onDownloadFile, onRenameFile, onCreateFolder, onSearch
+  files, selectedFile, onSelectFile, onUpload, onDeleteFile, onDownloadFile, onRenameFile, onSearch
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
   const [internalDrag, setInternalDrag] = useState(false);
+  const [uploadMenuOpen, setUploadMenuOpen] = useState(false);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     onUpload(acceptedFiles);
@@ -64,10 +64,28 @@ export const Explorer: React.FC<ExplorerProps> = ({
             onChange={(e) => onSearch(e.target.value)}
           />
         </div>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <button className="btn btn-primary" onClick={() => document.getElementById('file-upload')?.click()}>
-            <Upload size={16} />
-            Téléverser
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div className="upload-dropdown">
+            <button className="btn btn-outline" onClick={() => setUploadMenuOpen(!uploadMenuOpen)}>
+              <ArrowUpFromLine size={16} />
+              Importer
+              <ChevronDown size={14} />
+            </button>
+            {uploadMenuOpen && (
+              <>
+                <div className="upload-dropdown-backdrop" onClick={() => setUploadMenuOpen(false)} />
+                <div className="upload-dropdown-menu">
+                  <button onClick={() => { setUploadMenuOpen(false); document.getElementById('file-upload')?.click(); }}>
+                    <FileUp size={16} />
+                    Fichiers
+                  </button>
+                  <button onClick={() => { setUploadMenuOpen(false); document.getElementById('folder-upload')?.click(); }}>
+                    <FolderUp size={16} />
+                    Dossier
+                  </button>
+                </div>
+              </>
+            )}
             <input
               id="file-upload"
               type="file"
@@ -78,10 +96,6 @@ export const Explorer: React.FC<ExplorerProps> = ({
                 e.target.value = '';
               }}
             />
-          </button>
-          <button className="btn btn-outline" style={{ marginLeft: '12px' }} onClick={() => document.getElementById('folder-upload')?.click()}>
-            <Folder size={16} />
-            Téléverser un dossier
             <input
               id="folder-upload"
               type="file"
@@ -93,11 +107,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
                 e.target.value = '';
               }}
             />
-          </button>
-          <button className="btn btn-outline" style={{ marginLeft: '12px' }} onClick={onCreateFolder}>
-            <FolderPlus size={16} />
-            Nouveau Dossier
-          </button>
+          </div>
         </div>
       </div>
 
@@ -113,7 +123,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
           <div className="empty-state">
             <FolderPlus size={48} />
             <h3>Ce dossier est vide</h3>
-            <p>Glissez-déposez des fichiers ici ou utilisez le bouton Téléverser.</p>
+            <p>Glissez-déposez des fichiers ici ou utilisez le bouton Importer.</p>
           </div>
         ) : (
           <table className="file-table">

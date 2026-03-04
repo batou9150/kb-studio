@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Folder, FolderOpen, Home } from 'lucide-react';
+import { Folder, FolderOpen, FolderPlus, Home } from 'lucide-react';
 import type { FolderNode } from '../types';
 
 interface SidebarProps {
@@ -8,9 +8,10 @@ interface SidebarProps {
   onSelectFolder: (folderId: string) => void;
   onMoveFile: (fileId: string, folderId: string) => void;
   onUploadToFolder: (files: File[], folderId: string) => void;
+  onCreateFolder: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ folders, currentFolder, onSelectFolder, onMoveFile, onUploadToFolder }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ folders, currentFolder, onSelectFolder, onMoveFile, onUploadToFolder, onCreateFolder }) => {
   const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
   // Build a simple tree for rendering
   const tree: FolderNode[] = [];
@@ -72,6 +73,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ folders, currentFolder, onSele
     <aside className="sidebar">
       <div className="sidebar-header">
         Dossiers
+        <button className="icon-btn" title="Nouveau Dossier" onClick={onCreateFolder}>
+          <FolderPlus size={18} />
+        </button>
       </div>
       <div className="folder-tree">
         <div
