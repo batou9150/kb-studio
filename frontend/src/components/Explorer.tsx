@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import type { FileItem } from '../types';
-import { FileText, Image, File as FileIcon, Trash2, Download, FolderPlus, Upload, Folder, Pencil, Check, X } from 'lucide-react';
+import { FileText, Image, File as FileIcon, Trash2, Download, FolderPlus, Upload, Folder, Pencil, Check, X, Search } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface ExplorerProps {
@@ -13,10 +13,11 @@ interface ExplorerProps {
   onDownloadFile: (id: string) => void;
   onRenameFile: (id: string, newName: string) => void;
   onCreateFolder: () => void;
+  onSearch: (query: string) => void;
 }
 
 export const Explorer: React.FC<ExplorerProps> = ({ 
-  files, selectedFile, onSelectFile, onUpload, onDeleteFile, onDownloadFile, onRenameFile, onCreateFolder
+  files, selectedFile, onSelectFile, onUpload, onDeleteFile, onDownloadFile, onRenameFile, onCreateFolder, onSearch
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
@@ -55,7 +56,15 @@ export const Explorer: React.FC<ExplorerProps> = ({
       <input {...getInputProps()} />
       
       <div className="explorer-toolbar">
-        <div>
+        <div className="search-bar">
+          <Search size={18} color="var(--text-secondary)" />
+          <input
+            type="text"
+            placeholder="Rechercher un fichier..."
+            onChange={(e) => onSearch(e.target.value)}
+          />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
           <button className="btn btn-primary" onClick={() => document.getElementById('file-upload')?.click()}>
             <Upload size={16} />
             Téléverser
