@@ -76,7 +76,13 @@ export async function listDataStores() {
   return results;
 }
 
-export async function createDataStore(dataStoreId: string, displayName: string, location: string, documentProcessingConfig?: any) {
+export async function createDataStore(
+  dataStoreId: string,
+  displayName: string,
+  location: string,
+  documentProcessingConfig?: any,
+  appConfig?: { searchTier: 'standard' | 'enterprise'; enableLlm: boolean },
+) {
   const parent = collectionPath(location);
   const result = await getDataStoreClient(location).createDataStore({
     parent,
@@ -92,26 +98,30 @@ export async function createDataStore(dataStoreId: string, displayName: string, 
   const operation = result[0];
   const [dataStore] = await operation.promise();
 
-  // Create an engine (app) with LLM add-on so answerQuery works
-  const engineId = `${dataStoreId}-app`;
-  try {
-    const engineOp = await getEngineClient(location).createEngine({
-      parent,
-      engineId,
-      engine: {
-        displayName: `${displayName}`,
-        solutionType: 2,       // SOLUTION_TYPE_SEARCH
-        industryVertical: 1,   // GENERIC
-        dataStoreIds: [dataStoreId],
-        searchEngineConfig: {
-          searchTier: 2,       // SEARCH_TIER_ENTERPRISE
-          searchAddOns: [1],   // SEARCH_ADD_ON_LLM
+  if (appConfig) {
+    // Create an engine (app) so answerQuery works
+    const engineId = `${dataStoreId}-app`;
+    const searchTier = appConfig.searchTier === 'enterprise' ? 2 : 1; // 2=ENTERPRISE, 1=STANDARD
+    const searchAddOns = appConfig.enableLlm ? [1] : []; // 1=SEARCH_ADD_ON_LLM
+    try {
+      const engineOp = await getEngineClient(location).createEngine({
+        parent,
+        engineId,
+        engine: {
+          displayName: `${displayName}`,
+          solutionType: 2,       // SOLUTION_TYPE_SEARCH
+          industryVertical: 1,   // GENERIC
+          dataStoreIds: [dataStoreId],
+          searchEngineConfig: {
+            searchTier,
+            searchAddOns,
+          },
         },
-      },
-    });
-    await engineOp[0].promise();
-  } catch (err: any) {
-    console.error('Failed to create engine:', err.message);
+      });
+      await engineOp[0].promise();
+    } catch (err: any) {
+      console.error('Failed to create engine:', err.message);
+    }
   }
 
   // Trigger a full import so the datastore is immediately populated
