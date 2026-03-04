@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api';
 import type { DataStoreStatus, DataStoreDocument, ImportOperationStatus, ImportHistoryEntry } from '../types';
-import { Loader, AlertTriangle, CheckCircle, XCircle, RefreshCw, Trash2, Upload, Plus, ExternalLink, ChevronDown, ChevronRight, Clock, Eye, X } from 'lucide-react';
+import { Loader, AlertTriangle, CheckCircle, XCircle, RefreshCw, BrushCleaning, Trash2, Upload, Plus, ExternalLink, ChevronDown, ChevronRight, Clock, Eye, X } from 'lucide-react';
 
 const STORAGE_KEY = 'kb-studio-search-selected';
 
@@ -262,6 +262,28 @@ export const SearchPanel: React.FC = () => {
       await fetchStatus();
       setDocuments([]);
       setNextPageToken(null);
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleDeleteDataStore = async () => {
+    if (!window.confirm(`Supprimer le datastore "${dataStoreId}" et son application associée ?`)) return;
+    if (!window.confirm('Cette action est irréversible. Confirmer la suppression ?')) return;
+    setActionLoading('delete');
+    setError(null);
+    try {
+      await api.deleteDataStore(dataStoreId, location);
+      setDataStoreId('');
+      setLocation('global');
+      setStatus(null);
+      setDocuments([]);
+      setNextPageToken(null);
+      setImportHistory([]);
+      localStorage.removeItem(STORAGE_KEY);
+      await fetchDataStores();
     } catch (err: any) {
       setError(err.response?.data?.error || err.message);
     } finally {
@@ -647,11 +669,17 @@ export const SearchPanel: React.FC = () => {
             <AlertTriangle size={20} />
             <h3>Zone dangereuse</h3>
           </div>
-          <p>Purger tous les documents du datastore Vertex AI Search. Les fichiers dans GCS ne sont pas affectés.</p>
-          <button className="btn btn-danger" onClick={handlePurge} disabled={isActionLoading}>
-            {actionLoading === 'purge' ? <Loader size={16} className="spinner" /> : <Trash2 size={16} />}
-            {actionLoading === 'purge' ? 'Purge en cours...' : 'Purger tous les documents'}
-          </button>
+          <p>Ces actions sont irréversibles. Les fichiers dans GCS ne sont pas affectés.</p>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <button className="btn btn-danger" onClick={handlePurge} disabled={isActionLoading}>
+              {actionLoading === 'purge' ? <Loader size={16} className="spinner" /> : <BrushCleaning size={16} />}
+              {actionLoading === 'purge' ? 'Purge en cours...' : 'Purger tous les documents'}
+            </button>
+            <button className="btn btn-danger" onClick={handleDeleteDataStore} disabled={isActionLoading}>
+              {actionLoading === 'delete' ? <Loader size={16} className="spinner" /> : <Trash2 size={16} />}
+              {actionLoading === 'delete' ? 'Suppression en cours...' : 'Supprimer le datastore'}
+            </button>
+          </div>
         </div>
       )}
 

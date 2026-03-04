@@ -133,6 +133,10 @@ export const api = {
     const res = await apiClient.get(`/search/datastores/${encodeURIComponent(dataStoreId)}/documents`, { params: { location, pageSize, pageToken } });
     return res.data;
   },
+  deleteDataStore: async (dataStoreId: string, location: string) => {
+    const res = await apiClient.delete(`/search/datastores/${encodeURIComponent(dataStoreId)}`, { params: { location } });
+    return res.data;
+  },
   answerQuery: async (dataStoreId: string, location: string, query: string): Promise<AnswerQueryResponse> => {
     const res = await apiClient.post(`/search/datastores/${encodeURIComponent(dataStoreId)}/answer`, { location, query });
     return res.data;

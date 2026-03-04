@@ -273,6 +273,21 @@ export async function purgeDocuments(dataStoreId: string, location: string) {
   return response;
 }
 
+export async function deleteDataStore(dataStoreId: string, location: string) {
+  // Delete the engine (app) first if one exists
+  const engineId = await findEngineForDataStore(dataStoreId, location);
+  if (engineId) {
+    const engineName = enginePath(engineId, location);
+    const [engineOp] = await getEngineClient(location).deleteEngine({ name: engineName });
+    await engineOp.promise();
+  }
+
+  // Delete the datastore
+  const name = dataStorePath(dataStoreId, location);
+  const [operation] = await getDataStoreClient(location).deleteDataStore({ name });
+  await operation.promise();
+}
+
 async function findEngineForDataStore(dataStoreId: string, location: string): Promise<string | null> {
   const parent = collectionPath(location);
   try {
