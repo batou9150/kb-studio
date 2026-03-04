@@ -239,10 +239,20 @@ export async function listDocuments(dataStoreId: string, location: string, pageS
     if (doc.jsonData) {
       try { structData = JSON.parse(doc.jsonData); } catch {}
     }
+    const indexStatus = doc.indexStatus ?? null;
+    let indexState: 'indexed' | 'pending' | 'error' = 'pending';
+    if (indexStatus?.errorSamples && indexStatus.errorSamples.length > 0) {
+      indexState = 'error';
+    } else if (indexStatus?.indexTime) {
+      indexState = 'indexed';
+    }
+
     return {
       id: doc.id ?? '',
       uri: doc.content?.uri ?? '',
       structData,
+      indexState,
+      indexPendingMessage: (indexStatus as any)?.pendingMessage ?? null,
     };
   });
 

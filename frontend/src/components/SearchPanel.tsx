@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api';
 import type { DataStoreStatus, DataStoreDocument, ImportOperationStatus, ImportHistoryEntry } from '../types';
-import { Loader, AlertTriangle, CheckCircle, XCircle, RefreshCw, Trash2, Upload, Plus, ExternalLink, ChevronDown, ChevronRight, Clock } from 'lucide-react';
+import { Loader, AlertTriangle, CheckCircle, XCircle, RefreshCw, Trash2, Upload, Plus, ExternalLink, ChevronDown, ChevronRight, Clock, Eye, X } from 'lucide-react';
 
 const STORAGE_KEY = 'kb-studio-search-selected';
 
@@ -44,6 +44,8 @@ export const SearchPanel: React.FC = () => {
   const [importProgress, setImportProgress] = useState<ImportOperationStatus | null>(null);
   const [importHistory, setImportHistory] = useState<ImportHistoryEntry[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+
+  const [selectedDoc, setSelectedDoc] = useState<DataStoreDocument | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -577,21 +579,46 @@ export const SearchPanel: React.FC = () => {
                   <tr>
                     <th>ID</th>
                     <th>URI</th>
-                    <th>Titre</th>
-                    <th>Date valeur</th>
+                    <th>Statut indexation</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {documents.map(doc => (
-                    <tr key={doc.id}>
-                      <td style={{ fontSize: '0.8rem', fontFamily: 'monospace', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.id}</td>
-                      <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={doc.uri}>
-                        {doc.uri.split('/').pop() || doc.uri}
-                      </td>
-                      <td>{doc.structData?.title || '—'}</td>
-                      <td>{doc.structData?.value_date || '—'}</td>
-                    </tr>
-                  ))}
+                  {documents.map(doc => {
+                    const gcsUrl = doc.uri.startsWith('gs://')
+                      ? `https://storage.cloud.google.com/${doc.uri.slice(5)}`
+                      : doc.uri;
+                    return (
+                      <tr key={doc.id}>
+                        <td style={{ fontSize: '0.8rem', fontFamily: 'monospace', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>{doc.id}</td>
+                        <td style={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <a href={gcsUrl} target="_blank" rel="noopener noreferrer" title={doc.uri}>
+                            {doc.uri}
+                          </a>
+                        </td>
+                        <td>
+                          {doc.indexState === 'indexed' ? (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--success-color)' }}>
+                              <CheckCircle size={14} /> Indexé
+                            </span>
+                          ) : doc.indexState === 'error' ? (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--danger-color)' }}>
+                              <XCircle size={14} /> Erreur
+                            </span>
+                          ) : (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--warning-color)' }} title={doc.indexPendingMessage || undefined}>
+                              <Loader size={14} className="spinner" /> En attente
+                            </span>
+                          )}
+                        </td>
+                        <td>
+                          <button className="btn btn-outline" style={{ fontSize: '0.8rem', padding: '4px 10px' }} onClick={() => setSelectedDoc(doc)}>
+                            <Eye size={14} /> Voir le document
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
               {nextPageToken && (
@@ -618,6 +645,21 @@ export const SearchPanel: React.FC = () => {
             {actionLoading === 'purge' ? <Loader size={16} className="spinner" /> : <Trash2 size={16} />}
             {actionLoading === 'purge' ? 'Purge en cours...' : 'Purger tous les documents'}
           </button>
+        </div>
+      )}
+
+      {/* Document detail modal */}
+      {selectedDoc && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setSelectedDoc(null)}>
+          <div style={{ background: 'var(--bg-color, #fff)', borderRadius: 8, padding: 24, maxWidth: 600, width: '90%', maxHeight: '80vh', overflow: 'auto', position: 'relative' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ margin: 0, fontSize: '1rem' }}>Document {selectedDoc.id}</h3>
+              <button className="icon-btn" onClick={() => setSelectedDoc(null)}><X size={18} /></button>
+            </div>
+            <pre style={{ background: 'var(--bg-secondary, #f8f9fa)', padding: 16, borderRadius: 6, overflow: 'auto', fontSize: '0.85rem', margin: 0 }}>
+              {JSON.stringify(selectedDoc.structData, null, 2)}
+            </pre>
+          </div>
         </div>
       )}
     </div>
