@@ -58,7 +58,7 @@ export async function listDataStores() {
   return results;
 }
 
-export async function createDataStore(dataStoreId: string, displayName: string, location: string) {
+export async function createDataStore(dataStoreId: string, displayName: string, location: string, documentProcessingConfig?: any) {
   const parent = collectionPath(location);
   const result = await getDataStoreClient(location).createDataStore({
     parent,
@@ -68,6 +68,7 @@ export async function createDataStore(dataStoreId: string, displayName: string, 
       industryVertical: 1, // GENERIC
       solutionTypes: [2],  // SOLUTION_TYPE_SEARCH
       contentConfig: 2,    // CONTENT_REQUIRED
+      ...(documentProcessingConfig && { documentProcessingConfig }),
     },
   });
   const operation = result[0];
