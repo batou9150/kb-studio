@@ -236,6 +236,7 @@ export const SearchPanel: React.FC = () => {
     try {
       const { operationName } = await api.importDocuments(dataStoreId, location, mode);
       setImportOperation({ name: operationName, location });
+      setStatus(prev => prev ? { ...prev, lastImportDone: false } : prev);
     } catch (err: any) {
       setError(err.response?.data?.error || err.message);
       setActionLoading(null);
@@ -443,7 +444,15 @@ export const SearchPanel: React.FC = () => {
                 <tr>
                   <td style={{ fontWeight: 600 }}>Synchronisation</td>
                   <td>
-                    {status.isUpToDate ? (
+                    {!status.lastImportDone ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--primary-color)', fontWeight: 500 }}>
+                        <Loader size={16} className="spinner" /> Import en cours
+                      </span>
+                    ) : status.lastImportFailureCount > 0 ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--danger-color)', fontWeight: 500 }}>
+                        <XCircle size={16} /> {status.lastImportFailureCount} document{status.lastImportFailureCount > 1 ? 's' : ''} en erreur{status.lastImportFailureCount > 1 ? 's' : ''} à corriger
+                      </span>
+                    ) : status.isUpToDate ? (
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--success-color)', fontWeight: 500 }}>
                         <CheckCircle size={16} /> À jour
                       </span>
