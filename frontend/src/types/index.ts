@@ -52,6 +52,8 @@ export interface DataStoreDocument {
   id: string;
   uri: string;
   structData: Record<string, any>;
+  indexState: 'indexed' | 'pending' | 'error';
+  indexPendingMessage: string | null;
 }
 
 export interface ImportOperationStatus {
