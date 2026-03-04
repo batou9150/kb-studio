@@ -1,10 +1,10 @@
 import React from 'react';
-import { Database, FolderOpen, Globe, Settings } from 'lucide-react';
+import { Database, FolderOpen, TableOfContents, Settings } from 'lucide-react';
 
 interface HeaderProps {
-  currentView: 'explorer' | 'admin' | 'search';
+  currentView: 'explorer' | 'admin' | 'index';
   onNavigate: (folderId: string) => void;
-  onViewChange: (view: 'explorer' | 'admin' | 'search') => void;
+  onViewChange: (view: 'explorer' | 'admin' | 'index') => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, onViewChange }) => {
@@ -26,11 +26,11 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, onViewC
           Knowledge Base
         </button>
         <button
-          className={`header-tab ${currentView === 'search' ? 'active' : ''}`}
-          onClick={() => onViewChange('search')}
+          className={`header-tab ${currentView === 'index' ? 'active' : ''}`}
+          onClick={() => onViewChange('index')}
         >
-          <Globe size={16} />
-          Vertex AI Search
+          <TableOfContents size={16} />
+          Indexation
         </button>
         <button
           className={`header-tab ${currentView === 'admin' ? 'active' : ''}`}
