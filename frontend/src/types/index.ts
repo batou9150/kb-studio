@@ -75,3 +75,15 @@ export interface ImportHistoryEntry {
   totalCount: number;
   error: string | null;
 }
+
+export interface AnswerSearchResult {
+  document: string;
+  uri: string;
+  title: string;
+  snippets: string[];
+}
+
+export interface AnswerQueryResponse {
+  answerText: string;
+  searchResults: AnswerSearchResult[];
+}

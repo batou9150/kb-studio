@@ -118,10 +118,17 @@ export const SearchPanel: React.FC = () => {
     try {
       const history = await api.listImportOperations(dataStoreId, location);
       setImportHistory(history);
+
+      // If the most recent import is still running, start polling it
+      const latest = history[0];
+      if (latest && !latest.done && !importOperation) {
+        setImportOperation({ name: latest.name, location });
+        setActionLoading('import-poll');
+      }
     } catch {
       setImportHistory([]);
     }
-  }, [dataStoreId, location]);
+  }, [dataStoreId, location, importOperation]);
 
   // Poll import operation progress
   useEffect(() => {

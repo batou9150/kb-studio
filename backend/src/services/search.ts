@@ -17,6 +17,20 @@ function getDataStoreClient(location: string) {
     : new v1beta.DataStoreServiceClient();
 }
 
+function getEngineClient(location: string) {
+  const apiEndpointVal = apiEndpoint(location);
+  return apiEndpointVal
+    ? new v1beta.EngineServiceClient({ apiEndpoint: apiEndpointVal })
+    : new v1beta.EngineServiceClient();
+}
+
+function getConversationalSearchClient(location: string) {
+  const apiEndpointVal = apiEndpoint(location);
+  return apiEndpointVal
+    ? new v1beta.ConversationalSearchServiceClient({ apiEndpoint: apiEndpointVal })
+    : new v1beta.ConversationalSearchServiceClient();
+}
+
 function getDocumentClient(location: string) {
   const apiEndpointVal = apiEndpoint(location);
   return apiEndpointVal
@@ -30,6 +44,10 @@ function collectionPath(location: string) {
 
 function dataStorePath(dataStoreId: string, location: string) {
   return `${collectionPath(location)}/dataStores/${dataStoreId}`;
+}
+
+function enginePath(engineId: string, location: string) {
+  return `${collectionPath(location)}/engines/${engineId}`;
 }
 
 function branchPath(dataStoreId: string, location: string) {
@@ -73,6 +91,36 @@ export async function createDataStore(dataStoreId: string, displayName: string, 
   });
   const operation = result[0];
   const [dataStore] = await operation.promise();
+
+  // Create an engine (app) with LLM add-on so answerQuery works
+  const engineId = `${dataStoreId}-app`;
+  try {
+    const engineOp = await getEngineClient(location).createEngine({
+      parent,
+      engineId,
+      engine: {
+        displayName: `${displayName}`,
+        solutionType: 2,       // SOLUTION_TYPE_SEARCH
+        industryVertical: 1,   // GENERIC
+        dataStoreIds: [dataStoreId],
+        searchEngineConfig: {
+          searchTier: 2,       // SEARCH_TIER_ENTERPRISE
+          searchAddOns: [1],   // SEARCH_ADD_ON_LLM
+        },
+      },
+    });
+    await engineOp[0].promise();
+  } catch (err: any) {
+    console.error('Failed to create engine:', err.message);
+  }
+
+  // Trigger a full import so the datastore is immediately populated
+  try {
+    await startImport(dataStoreId, location, 'FULL');
+  } catch (err: any) {
+    console.error('Failed to trigger initial import:', err.message);
+  }
+
   return dataStore;
 }
 
@@ -223,6 +271,57 @@ export async function purgeDocuments(dataStoreId: string, location: string) {
   });
   const [response] = await operation.promise();
   return response;
+}
+
+async function findEngineForDataStore(dataStoreId: string, location: string): Promise<string | null> {
+  const parent = collectionPath(location);
+  try {
+    const [engines] = await getEngineClient(location).listEngines({ parent });
+    for (const engine of engines) {
+      if (engine.dataStoreIds?.includes(dataStoreId)) {
+        const parts = (engine.name ?? '').split('/');
+        return parts[parts.length - 1];
+      }
+    }
+  } catch {}
+  return null;
+}
+
+export async function answerQuery(dataStoreId: string, location: string, queryText: string) {
+  // Find the engine associated with this datastore for LLM features
+  const engineId = await findEngineForDataStore(dataStoreId, location);
+  if (!engineId) {
+    throw new Error('No engine (app) found for this datastore. Create one with LLM add-on enabled in the Google Cloud Console or recreate the datastore from the Indexation tab.');
+  }
+  const servingConfig = `${enginePath(engineId, location)}/servingConfigs/default_search`;
+  const client = getConversationalSearchClient(location);
+
+  const [response] = await client.answerQuery({
+    servingConfig,
+    query: { text: queryText },
+  });
+
+  const answerText = response.answer?.answerText ?? '';
+
+  const searchResults: { document: string; uri: string; title: string; snippets: string[] }[] = [];
+  const steps = response.answer?.steps ?? [];
+  for (const step of steps) {
+    for (const action of step.actions ?? []) {
+      for (const sr of action.observation?.searchResults ?? []) {
+        const snippets = (sr.snippetInfo ?? [])
+          .map((s: any) => s.snippet ?? '')
+          .filter((s: string) => s);
+        searchResults.push({
+          document: sr.document ?? '',
+          uri: sr.uri ?? '',
+          title: sr.title ?? '',
+          snippets,
+        });
+      }
+    }
+  }
+
+  return { answerText, searchResults };
 }
 
 export async function listDocuments(dataStoreId: string, location: string, pageSize = 20, pageToken?: string) {

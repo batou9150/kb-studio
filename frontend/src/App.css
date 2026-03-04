@@ -340,6 +340,19 @@ body {
   color: var(--text-primary);
 }
 
+.icon-btn.primary {
+  color: var(--primary-color);
+}
+
+.icon-btn:disabled {
+  color: var(--border-color);
+}
+
+.icon-btn:disabled:hover {
+  background: none;
+  color: var(--border-color);
+}
+
 .icon-btn.danger:hover {
   color: var(--danger-color);
   background-color: #fee2e2;
@@ -689,4 +702,68 @@ textarea.form-control {
   font-size: 0.9rem;
   color: var(--text-secondary);
   margin-bottom: 16px;
+}
+
+/* Answer Panel */
+.answer-panel {
+  flex: 1;
+  padding: 32px;
+  overflow-y: auto;
+}
+
+.answer-text {
+  background-color: var(--surface-color);
+  border-left: 4px solid var(--primary-color);
+  border-radius: 6px;
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  line-height: 1.6;
+  font-size: 0.95rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.answer-text p {
+  margin: 0 0 12px;
+}
+
+.answer-text p:last-child {
+  margin-bottom: 0;
+}
+
+.answer-text ul, .answer-text ol {
+  margin: 0 0 12px;
+  padding-left: 24px;
+}
+
+.answer-text code {
+  background-color: var(--bg-color);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.85em;
+}
+
+.answer-text pre {
+  background-color: var(--bg-color);
+  padding: 12px 16px;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 0 0 12px;
+}
+
+.answer-text pre code {
+  background: none;
+  padding: 0;
+}
+
+.answer-results {
+  margin-top: 8px;
+}
+
+.answer-result-card {
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 14px 18px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 }

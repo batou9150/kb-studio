@@ -1,10 +1,10 @@
 import React from 'react';
-import { Database, FolderOpen, TableOfContents, Settings } from 'lucide-react';
+import { Database, FolderOpen, TableOfContents, Search, Settings } from 'lucide-react';
 
 interface HeaderProps {
-  currentView: 'explorer' | 'admin' | 'index';
+  currentView: 'explorer' | 'admin' | 'index' | 'answer';
   onNavigate: (folderId: string) => void;
-  onViewChange: (view: 'explorer' | 'admin' | 'index') => void;
+  onViewChange: (view: 'explorer' | 'admin' | 'index' | 'answer') => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, onViewChange }) => {
@@ -31,6 +31,13 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, onViewC
         >
           <TableOfContents size={16} />
           Indexation
+        </button>
+        <button
+          className={`header-tab ${currentView === 'answer' ? 'active' : ''}`}
+          onClick={() => onViewChange('answer')}
+        >
+          <Search size={16} />
+          Search
         </button>
         <button
           className={`header-tab ${currentView === 'admin' ? 'active' : ''}`}

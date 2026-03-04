@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { FileItem, ImportOperationStatus, ImportHistoryEntry } from '../types';
+import type { FileItem, ImportOperationStatus, ImportHistoryEntry, AnswerQueryResponse } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
 
@@ -131,6 +131,10 @@ export const api = {
   },
   listDataStoreDocuments: async (dataStoreId: string, location: string, pageSize?: number, pageToken?: string) => {
     const res = await apiClient.get(`/search/datastores/${encodeURIComponent(dataStoreId)}/documents`, { params: { location, pageSize, pageToken } });
+    return res.data;
+  },
+  answerQuery: async (dataStoreId: string, location: string, query: string): Promise<AnswerQueryResponse> => {
+    const res = await apiClient.post(`/search/datastores/${encodeURIComponent(dataStoreId)}/answer`, { location, query });
     return res.data;
   },
 };
