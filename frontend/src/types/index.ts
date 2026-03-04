@@ -40,6 +40,10 @@ export interface DataStoreStatus {
   kbEntryCount: number;
   kbNdjsonUpdatedAt: string | null;
   lastImportTime: string | null;
+  lastImportDone: boolean;
+  lastImportSuccessCount: number;
+  lastImportFailureCount: number;
+  lastImportTotalCount: number;
   isUpToDate: boolean;
   consoleUrl: string | null;
 }

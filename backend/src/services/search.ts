@@ -76,15 +76,6 @@ export async function createDataStore(dataStoreId: string, displayName: string, 
   return dataStore;
 }
 
-async function writeImportTimestamp() {
-  const now = new Date().toISOString();
-  const file = storage.bucket(bucketName).file('kb.ndjson');
-  const [metadata] = await file.getMetadata();
-  await file.setMetadata({
-    metadata: { ...metadata.metadata, 'x-last-import-time': now },
-  });
-}
-
 export async function startImport(dataStoreId: string, location: string, mode: 'FULL' | 'INCREMENTAL' = 'INCREMENTAL') {
   const parent = branchPath(dataStoreId, location);
   const [operation] = await getDocumentClient(location).importDocuments({
@@ -94,11 +85,6 @@ export async function startImport(dataStoreId: string, location: string, mode: '
       dataSchema: 'document',
     },
     reconciliationMode: mode,
-  });
-
-  // Fire-and-forget: await LRO completion in background to write GCS timestamp
-  operation.promise().then(() => writeImportTimestamp()).catch(err => {
-    console.error('Background import completion handler failed:', err);
   });
 
   return { operationName: operation.name! };
@@ -120,11 +106,6 @@ export async function getImportOperationStatus(operationName: string, location: 
 
   if (op.done && op.error) {
     result.error = op.error.message ?? 'Import failed';
-  }
-
-  // If done successfully, ensure GCS timestamp is written (handles server restart case)
-  if (op.done && !op.error) {
-    try { await writeImportTimestamp(); } catch {}
   }
 
   return result;
@@ -208,22 +189,29 @@ export async function getDataStoreStatus(dataStoreId: string, location: string) 
   const [exists] = await file.exists();
   let kbEntryCount = 0;
   let kbNdjsonUpdatedAt: string | null = null;
-  let lastImportTime: string | null = null;
 
   if (exists) {
     const [meta] = await file.getMetadata();
     kbNdjsonUpdatedAt = (meta.updated as string) ?? null;
-    lastImportTime = (meta.metadata?.['x-last-import-time'] as string) ?? null;
 
     const [content] = await file.download();
     const lines = content.toString().trim().split(/\n/);
     kbEntryCount = lines.filter(l => l.trim() !== '').length;
   }
 
+  // Get last import info from operation history
+  const imports = await listImportOperations(dataStoreId, location);
+  const lastImport = imports[0] ?? null;
+  const lastImportTime = lastImport?.createTime ?? null;
+  const lastImportDone = lastImport?.done ?? false;
+  const lastImportSuccessCount = lastImport?.successCount ?? 0;
+  const lastImportFailureCount = lastImport?.failureCount ?? 0;
+  const lastImportTotalCount = lastImport?.totalCount ?? 0;
+
   const isUpToDate = kbEntryCount === documentCount && lastImportTime !== null && kbNdjsonUpdatedAt !== null && kbNdjsonUpdatedAt <= lastImportTime;
   const consoleUrl = `https://console.cloud.google.com/gen-app-builder/locations/${location}/collections/default_collection/data-stores/${dataStoreId}/data/activities?project=${projectId}`;
 
-  return { exists: true, documentCount, kbEntryCount, kbNdjsonUpdatedAt, lastImportTime, isUpToDate, consoleUrl };
+  return { exists: true, documentCount, kbEntryCount, kbNdjsonUpdatedAt, lastImportTime, lastImportDone, lastImportSuccessCount, lastImportFailureCount, lastImportTotalCount, isUpToDate, consoleUrl };
 }
 
 export async function purgeDocuments(dataStoreId: string, location: string) {
