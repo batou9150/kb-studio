@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api';
 import type { DataStoreStatus, DataStoreDocument } from '../types';
-import { Loader, AlertTriangle, CheckCircle, RefreshCw, Trash2, Upload, Plus, ExternalLink } from 'lucide-react';
+import { Loader, AlertTriangle, CheckCircle, RefreshCw, Trash2, Upload, Plus, ExternalLink, ChevronDown, ChevronRight } from 'lucide-react';
 
 const STORAGE_KEY = 'kb-studio-search-selected';
 
@@ -25,6 +25,16 @@ export const SearchPanel: React.FC = () => {
   const [newId, setNewId] = useState('');
   const [newDisplayName, setNewDisplayName] = useState('');
   const [newLocation, setNewLocation] = useState('global');
+
+  // Advanced options
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [defaultParser, setDefaultParser] = useState<'digital' | 'ocr' | 'layout'>('digital');
+  const [ocrUseNativeText, setOcrUseNativeText] = useState(true);
+  const [layoutEnableTableAnnotation, setLayoutEnableTableAnnotation] = useState(false);
+  const [layoutEnableImageAnnotation, setLayoutEnableImageAnnotation] = useState(false);
+  const [enableChunking, setEnableChunking] = useState(false);
+  const [chunkSize, setChunkSize] = useState(500);
+  const [includeAncestorHeadings, setIncludeAncestorHeadings] = useState(false);
 
   const [status, setStatus] = useState<DataStoreStatus | null>(null);
   const [documents, setDocuments] = useState<DataStoreDocument[]>([]);
@@ -125,13 +135,48 @@ export const SearchPanel: React.FC = () => {
     setActionLoading('create');
     setError(null);
     try {
-      await api.createDataStore(newId, newDisplayName, newLocation);
+      // Build documentProcessingConfig from advanced options
+      let documentProcessingConfig: any = undefined;
+      const hasParserConfig = defaultParser !== 'digital';
+      const hasChunkingConfig = enableChunking;
+      if (hasParserConfig || hasChunkingConfig) {
+        documentProcessingConfig = {};
+        if (defaultParser === 'ocr') {
+          documentProcessingConfig.defaultParsingConfig = {
+            ocrParsingConfig: { useNativeText: ocrUseNativeText },
+          };
+        } else if (defaultParser === 'layout') {
+          documentProcessingConfig.defaultParsingConfig = {
+            layoutParsingConfig: {
+              enableTableAnnotation: layoutEnableTableAnnotation,
+              enableImageAnnotation: layoutEnableImageAnnotation,
+            },
+          };
+        }
+        if (hasChunkingConfig) {
+          documentProcessingConfig.chunkingConfig = {
+            layoutBasedChunkingConfig: {
+              chunkSize,
+              includeAncestorHeadings,
+            },
+          };
+        }
+      }
+      await api.createDataStore(newId, newDisplayName, newLocation, documentProcessingConfig);
       await fetchDataStores();
       setDataStoreId(newId);
       setLocation(newLocation);
       setShowCreateForm(false);
       setNewId('');
       setNewDisplayName('');
+      setShowAdvanced(false);
+      setDefaultParser('digital');
+      setOcrUseNativeText(true);
+      setLayoutEnableTableAnnotation(false);
+      setLayoutEnableImageAnnotation(false);
+      setEnableChunking(false);
+      setChunkSize(500);
+      setIncludeAncestorHeadings(false);
     } catch (err: any) {
       setError(err.response?.data?.error || err.message);
     } finally {
@@ -216,12 +261,15 @@ export const SearchPanel: React.FC = () => {
           <div style={{ marginTop: 16, padding: 16, border: '1px solid var(--border-color)', borderRadius: 8, background: 'var(--bg-color)' }}>
             <div style={{ display: 'flex', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
               <div className="form-group" style={{ flex: 1, minWidth: 180, marginBottom: 0 }}>
-                <label>Datastore ID</label>
-                <input className="form-control" value={newId} onChange={e => setNewId(e.target.value)} placeholder="my-kb-datastore" />
+                <label>Nom du Datastore</label>
+                <input className="form-control" value={newDisplayName} onChange={e => {
+                  setNewDisplayName(e.target.value);
+                  setNewId(e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '_' + Date.now());
+                }} placeholder="Ma Base de Connaissances" />
               </div>
               <div className="form-group" style={{ flex: 1, minWidth: 180, marginBottom: 0 }}>
-                <label>Nom d'affichage</label>
-                <input className="form-control" value={newDisplayName} onChange={e => setNewDisplayName(e.target.value)} placeholder="Ma Base de Connaissances" />
+                <label>ID du Datastore</label>
+                <input className="form-control" value={newId} onChange={e => setNewId(e.target.value)} placeholder="my-kb-datastore" />
               </div>
               <div className="form-group" style={{ minWidth: 120, marginBottom: 0 }}>
                 <label>Région</label>
@@ -232,6 +280,84 @@ export const SearchPanel: React.FC = () => {
                 </select>
               </div>
             </div>
+            {/* Advanced options toggle */}
+            <div
+              style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', userSelect: 'none', marginBottom: 12, fontSize: '0.9rem', color: 'var(--text-secondary)' }}
+              onClick={() => setShowAdvanced(!showAdvanced)}
+            >
+              {showAdvanced ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+              Options avancées
+            </div>
+
+            {showAdvanced && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 16 }}>
+                {/* Parsing config */}
+                <fieldset style={{ flex: 1, minWidth: 220, border: '1px solid var(--border-color)', borderRadius: 6, padding: '12px 16px' }}>
+                  <legend style={{ fontSize: '0.85rem', fontWeight: 600, padding: '0 4px' }}>Parsing par défaut</legend>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                      <input type="radio" name="parser" checked={defaultParser === 'digital'} onChange={() => setDefaultParser('digital')} /> Digital
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                      <input type="radio" name="parser" checked={defaultParser === 'ocr'} onChange={() => setDefaultParser('ocr')} /> OCR
+                    </label>
+                    {defaultParser === 'ocr' && (
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', marginLeft: 20 }}>
+                        <input type="checkbox" checked={ocrUseNativeText} onChange={e => setOcrUseNativeText(e.target.checked)} />
+                        Utiliser le texte natif si disponible
+                      </label>
+                    )}
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                      <input type="radio" name="parser" checked={defaultParser === 'layout'} onChange={() => setDefaultParser('layout')} /> Layout
+                    </label>
+                    {defaultParser === 'layout' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginLeft: 20 }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                          <input type="checkbox" checked={layoutEnableTableAnnotation} onChange={e => setLayoutEnableTableAnnotation(e.target.checked)} />
+                          Annotation des tableaux
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                          <input type="checkbox" checked={layoutEnableImageAnnotation} onChange={e => setLayoutEnableImageAnnotation(e.target.checked)} />
+                          Annotation des images
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                </fieldset>
+
+                {/* Chunking config */}
+                <fieldset style={{ flex: 1, minWidth: 220, border: '1px solid var(--border-color)', borderRadius: 6, padding: '12px 16px' }}>
+                  <legend style={{ fontSize: '0.85rem', fontWeight: 600, padding: '0 4px' }}>Chunking (RAG)</legend>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                      <input type="checkbox" checked={enableChunking} onChange={e => setEnableChunking(e.target.checked)} />
+                      Activer la configuration avancée de chunking
+                    </label>
+                    {enableChunking && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginLeft: 20 }}>
+                        <div className="form-group" style={{ marginBottom: 0 }}>
+                          <label style={{ fontSize: '0.85rem' }}>Taille des chunks</label>
+                          <input
+                            type="number"
+                            className="form-control"
+                            min={100}
+                            max={500}
+                            value={chunkSize}
+                            onChange={e => setChunkSize(Math.min(500, Math.max(100, Number(e.target.value))))}
+                            style={{ width: 120 }}
+                          />
+                        </div>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                          <input type="checkbox" checked={includeAncestorHeadings} onChange={e => setIncludeAncestorHeadings(e.target.checked)} />
+                          Inclure les titres parents
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                </fieldset>
+              </div>
+            )}
+
             <div style={{ display: 'flex', gap: 12 }}>
               <button className="btn btn-primary" onClick={handleCreate} disabled={!newId || !newDisplayName || isActionLoading}>
                 {actionLoading === 'create' ? <Loader size={16} className="spinner" /> : <Plus size={16} />}

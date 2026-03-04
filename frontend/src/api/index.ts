@@ -105,8 +105,8 @@ export const api = {
     const res = await apiClient.get('/search/datastores');
     return res.data;
   },
-  createDataStore: async (dataStoreId: string, displayName: string, location: string) => {
-    const res = await apiClient.post('/search/datastores', { dataStoreId, displayName, location });
+  createDataStore: async (dataStoreId: string, displayName: string, location: string, documentProcessingConfig?: any) => {
+    const res = await apiClient.post('/search/datastores', { dataStoreId, displayName, location, documentProcessingConfig });
     return res.data;
   },
   importDocuments: async (dataStoreId: string, location: string, mode?: string) => {
