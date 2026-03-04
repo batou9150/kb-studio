@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { FileItem } from '../types';
+import type { FileItem, ImportOperationStatus, ImportHistoryEntry } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
 
@@ -109,8 +109,16 @@ export const api = {
     const res = await apiClient.post('/search/datastores', { dataStoreId, displayName, location, documentProcessingConfig });
     return res.data;
   },
-  importDocuments: async (dataStoreId: string, location: string, mode?: string) => {
+  importDocuments: async (dataStoreId: string, location: string, mode?: string): Promise<{ operationName: string }> => {
     const res = await apiClient.post(`/search/datastores/${encodeURIComponent(dataStoreId)}/import`, { location, mode });
+    return res.data;
+  },
+  getImportOperationStatus: async (operationName: string, location: string): Promise<ImportOperationStatus> => {
+    const res = await apiClient.get('/search/operations/status', { params: { name: operationName, location } });
+    return res.data;
+  },
+  listImportOperations: async (dataStoreId: string, location: string): Promise<ImportHistoryEntry[]> => {
+    const res = await apiClient.get(`/search/datastores/${encodeURIComponent(dataStoreId)}/imports`, { params: { location } });
     return res.data;
   },
   getDataStoreStatus: async (dataStoreId: string, location: string) => {

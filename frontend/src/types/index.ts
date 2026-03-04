@@ -49,3 +49,23 @@ export interface DataStoreDocument {
   uri: string;
   structData: Record<string, any>;
 }
+
+export interface ImportOperationStatus {
+  name: string;
+  done: boolean;
+  successCount: number;
+  failureCount: number;
+  totalCount: number;
+  error?: string | null;
+}
+
+export interface ImportHistoryEntry {
+  name: string;
+  done: boolean;
+  createTime: string | null;
+  updateTime: string | null;
+  successCount: number;
+  failureCount: number;
+  totalCount: number;
+  error: string | null;
+}

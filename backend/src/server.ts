@@ -12,7 +12,9 @@ import type { KbEntry } from './services/storage';
 import {
   listDataStores as searchListDataStores,
   createDataStore as searchCreateDataStore,
-  importDocuments as searchImportDocuments,
+  startImport as searchStartImport,
+  getImportOperationStatus as searchGetImportOperationStatus,
+  listImportOperations as searchListImportOperations,
   getDataStoreStatus as searchGetDataStoreStatus,
   purgeDocuments as searchPurgeDocuments,
   listDocuments as searchListDocuments,
@@ -328,12 +330,37 @@ app.post('/api/search/datastores', async (req, res) => {
   }
 });
 
-// POST /api/search/datastores/:id/import — Import documents
+// POST /api/search/datastores/:id/import — Start async import
 app.post('/api/search/datastores/:id/import', async (req, res) => {
   try {
     const dataStoreId = req.params.id as string;
     const { location = 'global', mode = 'INCREMENTAL' } = req.body;
-    const result = await searchImportDocuments(dataStoreId, location, mode);
+    const result = await searchStartImport(dataStoreId, location, mode);
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/search/operations/status — Poll import operation progress
+app.get('/api/search/operations/status', async (req, res) => {
+  try {
+    const name = req.query.name as string;
+    const location = (req.query.location as string) || 'global';
+    if (!name) return res.status(400).json({ error: 'name query parameter is required' });
+    const result = await searchGetImportOperationStatus(name, location);
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/search/datastores/:id/imports — List import operation history
+app.get('/api/search/datastores/:id/imports', async (req, res) => {
+  try {
+    const dataStoreId = req.params.id as string;
+    const location = (req.query.location as string) || 'global';
+    const result = await searchListImportOperations(dataStoreId, location);
     res.json(result);
   } catch (err: any) {
     res.status(500).json({ error: err.message });

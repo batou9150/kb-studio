@@ -1,4 +1,4 @@
-import { v1beta } from '@google-cloud/discoveryengine';
+import { v1beta, protos } from '@google-cloud/discoveryengine';
 import { Storage } from '@google-cloud/storage';
 
 const projectId = process.env.GOOGLE_CLOUD_PROJECT!;
@@ -76,7 +76,16 @@ export async function createDataStore(dataStoreId: string, displayName: string, 
   return dataStore;
 }
 
-export async function importDocuments(dataStoreId: string, location: string, mode: 'FULL' | 'INCREMENTAL' = 'INCREMENTAL') {
+async function writeImportTimestamp() {
+  const now = new Date().toISOString();
+  const file = storage.bucket(bucketName).file('kb.ndjson');
+  const [metadata] = await file.getMetadata();
+  await file.setMetadata({
+    metadata: { ...metadata.metadata, 'x-last-import-time': now },
+  });
+}
+
+export async function startImport(dataStoreId: string, location: string, mode: 'FULL' | 'INCREMENTAL' = 'INCREMENTAL') {
   const parent = branchPath(dataStoreId, location);
   const [operation] = await getDocumentClient(location).importDocuments({
     parent,
@@ -86,17 +95,90 @@ export async function importDocuments(dataStoreId: string, location: string, mod
     },
     reconciliationMode: mode,
   });
-  const [response] = await operation.promise();
 
-  // Persist last import time as custom metadata on kb.ndjson
-  const now = new Date().toISOString();
-  const file = storage.bucket(bucketName).file('kb.ndjson');
-  const [metadata] = await file.getMetadata();
-  await file.setMetadata({
-    metadata: { ...metadata.metadata, 'x-last-import-time': now },
+  // Fire-and-forget: await LRO completion in background to write GCS timestamp
+  operation.promise().then(() => writeImportTimestamp()).catch(err => {
+    console.error('Background import completion handler failed:', err);
   });
 
-  return { response, lastImportTime: now };
+  return { operationName: operation.name! };
+}
+
+export async function getImportOperationStatus(operationName: string, location: string) {
+  const client = getDocumentClient(location);
+  const op = await client.checkImportDocumentsProgress(operationName);
+  const metadata = op.metadata as any;
+
+  const result = {
+    name: op.name,
+    done: op.done ?? false,
+    successCount: Number(metadata?.successCount ?? 0),
+    failureCount: Number(metadata?.failureCount ?? 0),
+    totalCount: Number(metadata?.totalCount ?? 0),
+    error: null as string | null,
+  };
+
+  if (op.done && op.error) {
+    result.error = op.error.message ?? 'Import failed';
+  }
+
+  // If done successfully, ensure GCS timestamp is written (handles server restart case)
+  if (op.done && !op.error) {
+    try { await writeImportTimestamp(); } catch {}
+  }
+
+  return result;
+}
+
+function timestampToISO(ts: any): string | null {
+  if (!ts) return null;
+  const seconds = Number(ts.seconds ?? 0);
+  const nanos = Number(ts.nanos ?? 0);
+  return new Date(seconds * 1000 + nanos / 1e6).toISOString();
+}
+
+export async function listImportOperations(dataStoreId: string, location: string) {
+  const client = getDocumentClient(location);
+  const name = branchPath(dataStoreId, location);
+  const ImportDocumentsMetadata = protos.google.cloud.discoveryengine.v1beta.ImportDocumentsMetadata;
+
+  const operations: {
+    name: string;
+    done: boolean;
+    createTime: string | null;
+    updateTime: string | null;
+    successCount: number;
+    failureCount: number;
+    totalCount: number;
+    error: string | null;
+  }[] = [];
+
+  for await (const op of client.listOperationsAsync({ name } as any)) {
+    if (!op.name?.includes('import-documents')) continue;
+
+    let metadata: protos.google.cloud.discoveryengine.v1beta.IImportDocumentsMetadata = {};
+    if (op.metadata?.value) {
+      try {
+        metadata = ImportDocumentsMetadata.decode(op.metadata.value as Uint8Array);
+      } catch {}
+    }
+
+    operations.push({
+      name: op.name,
+      done: op.done ?? false,
+      createTime: timestampToISO(metadata.createTime),
+      updateTime: timestampToISO(metadata.updateTime),
+      successCount: Number(metadata.successCount ?? 0),
+      failureCount: Number(metadata.failureCount ?? 0),
+      totalCount: Number(metadata.totalCount ?? 0),
+      error: op.done && op.error ? (op.error.message ?? 'Import failed') : null,
+    });
+  }
+
+  // Sort by createTime descending (most recent first)
+  operations.sort((a, b) => (b.createTime ?? '').localeCompare(a.createTime ?? ''));
+
+  return operations;
 }
 
 export async function getDataStoreStatus(dataStoreId: string, location: string) {
