@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api';
-import type { DataStoreStatus, DataStoreDocument } from '../types';
-import { Loader, AlertTriangle, CheckCircle, RefreshCw, Trash2, Upload, Plus, ExternalLink, ChevronDown, ChevronRight } from 'lucide-react';
+import type { DataStoreStatus, DataStoreDocument, ImportOperationStatus, ImportHistoryEntry } from '../types';
+import { Loader, AlertTriangle, CheckCircle, XCircle, RefreshCw, Trash2, Upload, Plus, ExternalLink, ChevronDown, ChevronRight, Clock } from 'lucide-react';
 
 const STORAGE_KEY = 'kb-studio-search-selected';
 
@@ -39,6 +39,11 @@ export const SearchPanel: React.FC = () => {
   const [status, setStatus] = useState<DataStoreStatus | null>(null);
   const [documents, setDocuments] = useState<DataStoreDocument[]>([]);
   const [nextPageToken, setNextPageToken] = useState<string | null>(null);
+
+  const [importOperation, setImportOperation] = useState<{ name: string; location: string } | null>(null);
+  const [importProgress, setImportProgress] = useState<ImportOperationStatus | null>(null);
+  const [importHistory, setImportHistory] = useState<ImportHistoryEntry[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -106,14 +111,54 @@ export const SearchPanel: React.FC = () => {
     } catch {}
   }, [dataStoreId, location, nextPageToken]);
 
+  const fetchImportHistory = useCallback(async () => {
+    if (!dataStoreId) return;
+    try {
+      const history = await api.listImportOperations(dataStoreId, location);
+      setImportHistory(history);
+    } catch {
+      setImportHistory([]);
+    }
+  }, [dataStoreId, location]);
+
+  // Poll import operation progress
+  useEffect(() => {
+    if (!importOperation) return;
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const status = await api.getImportOperationStatus(importOperation.name, importOperation.location);
+        if (cancelled) return;
+        setImportProgress(status);
+        if (status.done) {
+          setImportOperation(null);
+          setActionLoading(null);
+          if (status.error) {
+            setError(status.error);
+          }
+          fetchStatus();
+          fetchDocuments();
+          fetchImportHistory();
+        }
+      } catch {
+        if (cancelled) return;
+      }
+    };
+    poll(); // immediate first poll
+    const interval = setInterval(poll, 3000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [importOperation]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Auto-fetch when selection changes
   useEffect(() => {
     if (dataStoreId) {
       setStatus(null);
       setDocuments([]);
       setNextPageToken(null);
+      setImportHistory([]);
       fetchStatus();
       fetchDocuments();
+      fetchImportHistory();
     }
   }, [dataStoreId, location]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -187,13 +232,12 @@ export const SearchPanel: React.FC = () => {
   const handleImport = async (mode: 'INCREMENTAL' | 'FULL') => {
     setActionLoading(`import-${mode}`);
     setError(null);
+    setImportProgress(null);
     try {
-      await api.importDocuments(dataStoreId, location, mode);
-      await fetchStatus();
-      await fetchDocuments();
+      const { operationName } = await api.importDocuments(dataStoreId, location, mode);
+      setImportOperation({ name: operationName, location });
     } catch (err: any) {
       setError(err.response?.data?.error || err.message);
-    } finally {
       setActionLoading(null);
     }
   };
@@ -431,6 +475,78 @@ export const SearchPanel: React.FC = () => {
               {actionLoading === 'import-FULL' ? <Loader size={16} className="spinner" /> : <Upload size={16} />}
               Import (Full)
             </button>
+          </div>
+          {importOperation && (
+            <div style={{ marginTop: 12, padding: '12px 16px', background: 'var(--bg-secondary, #f8f9fa)', border: '1px solid var(--border-color)', borderRadius: 6, fontSize: '0.9rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: importProgress && importProgress.totalCount > 0 ? 8 : 0 }}>
+                <Loader size={14} className="spinner" />
+                <span style={{ fontWeight: 500 }}>Import en cours...</span>
+              </div>
+              {importProgress && importProgress.totalCount > 0 && (
+                <div style={{ display: 'flex', gap: 16, color: 'var(--text-secondary)' }}>
+                  <span>Traités {importProgress.successCount + importProgress.failureCount}/{importProgress.totalCount}</span>
+                  <span style={{ color: 'var(--success-color)' }}>Succès {importProgress.successCount}</span>
+                  {importProgress.failureCount > 0 && (
+                    <span style={{ color: 'var(--danger-color)' }}>Échecs {importProgress.failureCount}</span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+          {/* Import history */}
+          <div style={{ marginTop: 16 }}>
+            <div
+              style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', userSelect: 'none', fontSize: '0.9rem', color: 'var(--text-secondary)' }}
+              onClick={() => setShowHistory(!showHistory)}
+            >
+              {showHistory ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+              <Clock size={14} />
+              Historique des imports
+            </div>
+            {showHistory && (
+              <div style={{ marginTop: 8 }}>
+                {importHistory.length > 0 ? (
+                  <table className="file-table" style={{ fontSize: '0.85rem' }}>
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Statut</th>
+                        <th>Succès</th>
+                        <th>Échecs</th>
+                        <th>Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {importHistory.map(op => (
+                        <tr key={op.name}>
+                          <td style={{ whiteSpace: 'nowrap' }}>{op.createTime ? new Date(op.createTime).toLocaleString() : '—'}</td>
+                          <td>
+                            {!op.done ? (
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--primary-color)' }}>
+                                <Loader size={12} className="spinner" /> En cours
+                              </span>
+                            ) : op.error ? (
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--danger-color)' }}>
+                                <XCircle size={12} /> Erreur
+                              </span>
+                            ) : (
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--success-color)' }}>
+                                <CheckCircle size={12} /> Terminé
+                              </span>
+                            )}
+                          </td>
+                          <td>{op.successCount}</td>
+                          <td>{op.failureCount > 0 ? <span style={{ color: 'var(--danger-color)' }}>{op.failureCount}</span> : op.failureCount}</td>
+                          <td>{op.totalCount}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: '4px 0 0' }}>Aucun import précédent.</p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
