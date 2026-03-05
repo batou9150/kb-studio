@@ -38,6 +38,13 @@ function getDocumentClient(location: string) {
     : new v1beta.DocumentServiceClient();
 }
 
+function getSearchClient(location: string) {
+  const apiEndpointVal = apiEndpoint(location);
+  return apiEndpointVal
+    ? new v1beta.SearchServiceClient({ apiEndpoint: apiEndpointVal })
+    : new v1beta.SearchServiceClient();
+}
+
 function collectionPath(location: string) {
   return `projects/${projectId}/locations/${location}/collections/default_collection`;
 }
@@ -56,19 +63,64 @@ function branchPath(dataStoreId: string, location: string) {
 
 const LOCATIONS = ['global', 'eu', 'us'];
 
+interface EngineInfo {
+  engineId: string;
+  displayName: string;
+  solutionType: string;
+  searchTier: string;
+  searchAddOns: string[];
+}
+
+const SOLUTION_TYPE_LABELS: Record<string | number, string> = {
+  0: 'unspecified', 1: 'recommendation', 2: 'search', 3: 'chat', 4: 'generative_chat',
+  SOLUTION_TYPE_UNSPECIFIED: 'unspecified', SOLUTION_TYPE_RECOMMENDATION: 'recommendation',
+  SOLUTION_TYPE_SEARCH: 'search', SOLUTION_TYPE_CHAT: 'chat', SOLUTION_TYPE_GENERATIVE_CHAT: 'generative_chat',
+};
+
+const SEARCH_TIER_LABELS: Record<string | number, string> = {
+  0: 'unspecified', 1: 'standard', 2: 'enterprise',
+  SEARCH_TIER_UNSPECIFIED: 'unspecified', SEARCH_TIER_STANDARD: 'standard', SEARCH_TIER_ENTERPRISE: 'enterprise',
+};
+
+const SEARCH_ADD_ON_LABELS: Record<string | number, string> = {
+  0: 'unspecified', 1: 'llm',
+  SEARCH_ADD_ON_UNSPECIFIED: 'unspecified', SEARCH_ADD_ON_LLM: 'llm',
+};
+
 export async function listDataStores() {
-  const results: { dataStoreId: string; displayName: string; location: string }[] = [];
+  const results: { dataStoreId: string; displayName: string; location: string; engine: EngineInfo | null }[] = [];
 
   await Promise.all(LOCATIONS.map(async (loc) => {
     try {
-      const client = getDataStoreClient(loc);
       const parent = collectionPath(loc);
-      const [dataStores] = await client.listDataStores({ parent });
+      const [dataStores] = await getDataStoreClient(loc).listDataStores({ parent });
+
+      // List engines for this location to match them to datastores
+      let engines: (EngineInfo & { dataStoreIds: string[] })[] = [];
+      try {
+        const [engineList] = await getEngineClient(loc).listEngines({ parent });
+        engines = engineList.map(e => {
+          const parts = (e.name ?? '').split('/');
+          const searchConfig = (e as any).searchEngineConfig ?? {};
+          return {
+            engineId: parts[parts.length - 1],
+            displayName: e.displayName ?? '',
+            solutionType: SOLUTION_TYPE_LABELS[e.solutionType as number] ?? 'unknown',
+            searchTier: SEARCH_TIER_LABELS[searchConfig.searchTier as number] ?? 'unknown',
+            searchAddOns: ((searchConfig.searchAddOns ?? []) as number[]).map(a => SEARCH_ADD_ON_LABELS[a] ?? 'unknown'),
+            dataStoreIds: e.dataStoreIds ?? [],
+          };
+        });
+      } catch {}
+
       for (const ds of dataStores) {
-        // Extract dataStoreId from name: .../dataStores/{id}
         const parts = (ds.name ?? '').split('/');
         const id = parts[parts.length - 1];
-        results.push({ dataStoreId: id, displayName: ds.displayName ?? id, location: loc });
+        const engine = engines.find(e => e.dataStoreIds.includes(id));
+        const engineInfo: EngineInfo | null = engine
+          ? { engineId: engine.engineId, displayName: engine.displayName, solutionType: engine.solutionType, searchTier: engine.searchTier, searchAddOns: engine.searchAddOns }
+          : null;
+        results.push({ dataStoreId: id, displayName: ds.displayName ?? id, location: loc, engine: engineInfo });
       }
     } catch {}
   }));
@@ -347,6 +399,43 @@ export async function answerQuery(dataStoreId: string, location: string, queryTe
   }
 
   return { answerText, searchResults };
+}
+
+export async function searchQuery(dataStoreId: string, location: string, queryText: string) {
+  const servingConfig = `${dataStorePath(dataStoreId, location)}/servingConfigs/default_serving_config`;
+  const client = getSearchClient(location);
+
+  const [results] = await client.search({
+    servingConfig,
+    query: queryText,
+    pageSize: 10,
+    contentSearchSpec: {
+      snippetSpec: { returnSnippet: true },
+    },
+  });
+
+  const searchResults: { document: string; uri: string; title: string; snippets: string[] }[] = [];
+  for (const result of results) {
+    const doc = result.document;
+    if (!doc) continue;
+    const structData = doc.structData as any;
+    const derivedData = (result as any).document?.derivedStructData?.fields ?? {};
+    const title = structData?.fields?.title?.stringValue ?? derivedData?.title?.stringValue ?? doc.name ?? '';
+    const uri = derivedData?.link?.stringValue ?? doc.content?.uri ?? structData?.fields?.uri?.stringValue ?? '';
+    const snippets: string[] = [];
+    for (const snippet of derivedData?.snippets?.listValue?.values ?? []) {
+      const text = snippet.structValue?.fields?.snippet?.stringValue;
+      if (text) snippets.push(text);
+    }
+    searchResults.push({
+      document: doc.name ?? '',
+      uri,
+      title,
+      snippets,
+    });
+  }
+
+  return { answerText: '', searchResults };
 }
 
 export async function listDocuments(dataStoreId: string, location: string, pageSize = 20, pageToken?: string) {

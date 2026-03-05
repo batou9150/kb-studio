@@ -9,6 +9,7 @@ interface DataStoreOption {
   dataStoreId: string;
   displayName: string;
   location: string;
+  engine: { engineId: string; displayName: string; solutionType: string; searchTier: string; searchAddOns: string[] } | null;
 }
 
 export const SearchPanel: React.FC = () => {

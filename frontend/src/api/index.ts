@@ -101,7 +101,7 @@ export const api = {
   },
 
   // Search / Datastore management
-  listDataStores: async (): Promise<{ dataStoreId: string; displayName: string; location: string }[]> => {
+  listDataStores: async (): Promise<{ dataStoreId: string; displayName: string; location: string; engine: { engineId: string; displayName: string; solutionType: string; searchTier: string; searchAddOns: string[] } | null }[]> => {
     const res = await apiClient.get('/search/datastores');
     return res.data;
   },
@@ -139,6 +139,10 @@ export const api = {
   },
   answerQuery: async (dataStoreId: string, location: string, query: string): Promise<AnswerQueryResponse> => {
     const res = await apiClient.post(`/search/datastores/${encodeURIComponent(dataStoreId)}/answer`, { location, query });
+    return res.data;
+  },
+  searchQuery: async (dataStoreId: string, location: string, query: string): Promise<AnswerQueryResponse> => {
+    const res = await apiClient.post(`/search/datastores/${encodeURIComponent(dataStoreId)}/search`, { location, query });
     return res.data;
   },
 };

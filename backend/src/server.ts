@@ -19,6 +19,7 @@ import {
   purgeDocuments as searchPurgeDocuments,
   listDocuments as searchListDocuments,
   answerQuery as searchAnswerQuery,
+  searchQuery as searchSearchQuery,
   deleteDataStore as searchDeleteDataStore,
 } from './services/search';
 
@@ -414,6 +415,19 @@ app.delete('/api/search/datastores/:id', async (req, res) => {
     const location = (req.query.location as string) || 'global';
     await searchDeleteDataStore(dataStoreId, location);
     res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/search/datastores/:id/search — Search query (no engine required)
+app.post('/api/search/datastores/:id/search', async (req, res) => {
+  try {
+    const dataStoreId = req.params.id as string;
+    const { location = 'global', query } = req.body;
+    if (!query) return res.status(400).json({ error: 'query is required' });
+    const result = await searchSearchQuery(dataStoreId, location, query);
+    res.json(result);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
