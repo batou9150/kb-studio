@@ -6,10 +6,19 @@ import { Loader, SendHorizontal, ExternalLink } from 'lucide-react';
 
 const STORAGE_KEY = 'kb-studio-answer-datastore';
 
+interface EngineInfo {
+  engineId: string;
+  displayName: string;
+  solutionType: string;
+  searchTier: string;
+  searchAddOns: string[];
+}
+
 interface DataStoreOption {
   dataStoreId: string;
   displayName: string;
   location: string;
+  engine: EngineInfo | null;
 }
 
 export const AnswerPanel: React.FC = () => {
@@ -17,6 +26,7 @@ export const AnswerPanel: React.FC = () => {
   const [dataStoresLoading, setDataStoresLoading] = useState(true);
   const [dataStoreId, setDataStoreId] = useState('');
   const [location, setLocation] = useState('global');
+  const [engine, setEngine] = useState<EngineInfo | null>(null);
 
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
@@ -43,9 +53,11 @@ export const AnswerPanel: React.FC = () => {
       if (saved && list.length > 0) {
         try {
           const { dataStoreId: savedId, location: savedLoc } = JSON.parse(saved);
-          if (list.some(ds => ds.dataStoreId === savedId && ds.location === savedLoc)) {
+          const match = list.find(ds => ds.dataStoreId === savedId && ds.location === savedLoc);
+          if (match) {
             setDataStoreId(savedId);
             setLocation(savedLoc);
+            setEngine(match.engine);
           }
         } catch {}
       }
@@ -63,6 +75,7 @@ export const AnswerPanel: React.FC = () => {
     if (ds) {
       setDataStoreId(ds.dataStoreId);
       setLocation(ds.location);
+      setEngine(ds.engine);
     }
   };
 
@@ -72,7 +85,10 @@ export const AnswerPanel: React.FC = () => {
     setError(null);
     setResult(null);
     try {
-      const res = await api.answerQuery(dataStoreId, location, query.trim());
+      const hasLlm = engine?.searchAddOns?.includes('llm') ?? false;
+      const res = hasLlm
+        ? await api.answerQuery(dataStoreId, location, query.trim())
+        : await api.searchQuery(dataStoreId, location, query.trim());
       setResult(res);
     } catch (err: any) {
       setError(err.response?.data?.error || err.message);
