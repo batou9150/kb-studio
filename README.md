@@ -31,7 +31,7 @@ KB-Studio is a web application designed to allow non-technical users to manage a
 - **Processing Options:** Digital, OCR, or Layout parsing modes with configurable chunking
 
 ### White-Label Support
-- Customize the application name and logo via environment variables (`VITE_APP_NAME`, `VITE_APP_LOGO`)
+- Customize the application name and logo via runtime environment variables (`APP_NAME`, `APP_LOGO`)
 
 ## Technical Architecture
 
@@ -74,6 +74,8 @@ Edit `backend/.env`:
 | `GCS_BUCKET_NAME` | Google Cloud Storage bucket name | — |
 | `GOOGLE_CLOUD_PROJECT` | Google Cloud project ID | — |
 | `GEMINI_API_KEY` | Gemini API key | — |
+| `APP_NAME` | Custom application name (optional) | `KB-Studio` |
+| `APP_LOGO` | Custom logo URL (optional) | — |
 
 ```bash
 npm run dev
@@ -94,14 +96,42 @@ Edit `frontend/.env`:
 | Variable | Description | Default |
 |---|---|---|
 | `VITE_API_BASE_URL` | Backend API URL | `http://localhost:8080/api` |
-| `VITE_APP_NAME` | Custom application name (optional) | `KB-Studio` |
-| `VITE_APP_LOGO` | Custom logo URL (optional) | — |
 
 ```bash
 npm run dev
 ```
 
 The application is accessible at `http://localhost:5173`.
+
+### 4. Docker
+
+Build and run the application as a single container:
+
+```bash
+docker build -t kb-studio .
+```
+
+```bash
+docker run -p 8080:8080 \
+  -e GCS_BUCKET_NAME=my-bucket \
+  -e GOOGLE_CLOUD_PROJECT=my-project \
+  -e GEMINI_API_KEY=my-key \
+  -e APP_NAME="My Knowledge Base" \
+  -e APP_LOGO="https://example.com/logo.png" \
+  kb-studio
+```
+
+The application is accessible at `http://localhost:8080`.
+
+| Variable | Description | Default |
+|---|---|---|
+| `GCS_BUCKET_NAME` | Google Cloud Storage bucket name | `kb-studio-bucket` |
+| `GOOGLE_CLOUD_PROJECT` | Google Cloud project ID | — |
+| `GEMINI_API_KEY` | Gemini API key | — |
+| `APP_NAME` | Custom application name | `KB-Studio` |
+| `APP_LOGO` | Custom logo URL | — |
+
+Branding (`APP_NAME`, `APP_LOGO`) is configured at runtime — no rebuild needed to change them.
 
 ## Project Structure
 
@@ -181,4 +211,4 @@ kb-studio/
 ### Config
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/api/config` | Get bucket name and project ID |
+| `GET` | `/api/config` | Get bucket name, project ID, app name, and app logo |

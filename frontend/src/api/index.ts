@@ -9,7 +9,7 @@ const apiClient = axios.create({
 
 export const api = {
   // Config
-  getConfig: async (): Promise<{ bucketName: string; projectId: string }> => {
+  getConfig: async (): Promise<{ bucketName: string; projectId: string; appName: string; appLogo: string }> => {
     const res = await apiClient.get('/config');
     return res.data;
   },

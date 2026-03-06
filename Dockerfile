@@ -3,12 +3,8 @@ FROM node:22-alpine AS frontend-build
 WORKDIR /app/frontend
 
 ARG VITE_API_BASE_URL=/api
-ARG VITE_APP_NAME
-ARG VITE_APP_LOGO
 
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
-ENV VITE_APP_NAME=$VITE_APP_NAME
-ENV VITE_APP_LOGO=$VITE_APP_LOGO
 
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
