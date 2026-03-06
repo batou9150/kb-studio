@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../api';
 import { FolderPlus, Pencil, Trash2, AlertTriangle, Loader, History, Eye } from 'lucide-react';
+import { BucketSelector } from './BucketSelector';
 
 interface BatchInfo {
   name: string;
@@ -18,9 +19,13 @@ interface BatchDetails {
 interface AdminPanelProps {
   folders: string[];
   onDataChanged: () => void;
+  bucketNames: string[];
+  selectedBucket: string;
+  onBucketChange: (bucket: string) => void;
+  projectId: string;
 }
 
-export const AdminPanel: React.FC<AdminPanelProps> = ({ folders, onDataChanged }) => {
+export const AdminPanel: React.FC<AdminPanelProps> = ({ folders, onDataChanged, bucketNames, selectedBucket, onBucketChange, projectId }) => {
   const { t, i18n } = useTranslation('admin');
   const tc = useTranslation('common').t;
   const [loading, setLoading] = useState(false);
@@ -74,8 +79,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ folders, onDataChanged }
   };
 
   const handleDeleteAll = async () => {
-    if (!window.confirm(t('confirmDeleteAll'))) return;
-    if (!window.confirm(t('confirmDeleteAllIrreversible'))) return;
+    if (!window.confirm(t('confirmDeleteAll', { bucket: selectedBucket }))) return;
+    if (!window.confirm(t('confirmDeleteAllIrreversible', { bucket: selectedBucket }))) return;
     try {
       setLoading(true);
       await api.deleteAllFiles();
@@ -116,7 +121,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ folders, onDataChanged }
     <div className="admin-panel">
       <div className="admin-section">
         <div className="admin-section-header">
-          <h2>{t('folderManagement')}</h2>
+          <h2 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {t('folderManagementFor')}
+            <BucketSelector
+              bucketNames={bucketNames}
+              selectedBucket={selectedBucket}
+              onBucketChange={onBucketChange}
+              projectId={projectId}
+              gcsConsoleTitle={t('viewInConsole')}
+            />
+          </h2>
           <button className="btn btn-primary" onClick={handleCreateFolder} disabled={loading}>
             <FolderPlus size={16} /> {t('newFolder')}
           </button>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import './App.css';
-import { api } from './api';
+import { api, setCurrentBucket } from './api';
 import type { FileItem } from './types';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
@@ -20,7 +20,8 @@ function App() {
   const [currentFolder, setCurrentFolder] = useState<string>('');
   const [files, setFiles] = useState<FileItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [bucketName, setBucketName] = useState('');
+  const [bucketNames, setBucketNames] = useState<string[]>([]);
+  const [selectedBucket, setSelectedBucket] = useState('');
   const [projectId, setProjectId] = useState('');
   const [appName, setAppName] = useState('KB-Studio');
   const [appLogo, setAppLogo] = useState('');
@@ -38,6 +39,7 @@ function App() {
     | null
   >(null);
   const batchNameRef = useRef<string | null>(null);
+  const batchBucketRef = useRef<string>('');
 
   // Analyze results state
   const [analyzeResults, setAnalyzeResults] = useState<{
@@ -51,6 +53,7 @@ function App() {
   const [duplicates, setDuplicates] = useState<{name: string, id: string}[]>([]);
 
   const loadData = useCallback(async () => {
+    if (!selectedBucket) return;
     setLoading(true);
     try {
       const [foldersData, filesData] = await Promise.all([
@@ -65,11 +68,14 @@ function App() {
     } finally {
       setLoading(false);
     }
-  }, [currentFolder, searchQuery, t]);
+  }, [currentFolder, searchQuery, selectedBucket, t]);
 
   useEffect(() => {
-    api.getConfig().then(({ bucketName, projectId, appName, appLogo }) => {
-      setBucketName(bucketName);
+    api.getConfig().then(({ bucketNames: names, projectId, appName, appLogo }) => {
+      setBucketNames(names);
+      const first = names[0] || '';
+      setSelectedBucket(first);
+      setCurrentBucket(first);
       setProjectId(projectId);
       if (appName) {
         setAppName(appName);
@@ -92,6 +98,15 @@ function App() {
       }
     }
   }, [files, selectedFile]);
+
+  const handleBucketChange = (bucket: string) => {
+    setSelectedBucket(bucket);
+    setCurrentBucket(bucket);
+    setCurrentFolder('');
+    setSelectedFile(null);
+    setIsPanelOpen(false);
+    setSearchQuery('');
+  };
 
   const handleSelectFolder = (folderId: string) => {
     setCurrentFolder(folderId);
@@ -236,6 +251,7 @@ function App() {
   const handleAnalyzeAll = async () => {
     try {
       setAnalyzeProgress({ state: 'preparing' });
+      batchBucketRef.current = selectedBucket;
       const { batchName } = await api.startAnalyzeAll();
       batchNameRef.current = batchName;
       setAnalyzeProgress({ state: 'starting' });
@@ -250,7 +266,7 @@ function App() {
 
     const interval = setInterval(async () => {
       try {
-        const status = await api.getAnalyzeAllStatus(batchNameRef.current!);
+        const status = await api.getAnalyzeAllStatus(batchNameRef.current!, batchBucketRef.current);
         if (status.state === 'succeeded') {
           batchNameRef.current = null;
           setAnalyzeProgress(null);
@@ -308,15 +324,15 @@ function App() {
 
       {currentView === 'admin' ? (
         <div className="main-content">
-          <AdminPanel folders={folders} onDataChanged={loadData} />
+          <AdminPanel folders={folders} onDataChanged={loadData} bucketNames={bucketNames} selectedBucket={selectedBucket} onBucketChange={handleBucketChange} projectId={projectId} />
         </div>
       ) : currentView === 'index' ? (
         <div className="main-content">
-          <SearchPanel />
+          <SearchPanel bucketNames={bucketNames} selectedBucket={selectedBucket} onBucketChange={handleBucketChange} projectId={projectId} />
         </div>
       ) : currentView === 'answer' ? (
         <div className="main-content">
-          <AnswerPanel />
+          <AnswerPanel projectId={projectId} />
         </div>
       ) : (
         <div className="main-content">
@@ -336,7 +352,9 @@ function App() {
               onSearch={setSearchQuery}
               onAnalyzeAll={handleAnalyzeAll}
               analyzeProgress={analyzeProgress}
-              bucketName={bucketName}
+              bucketNames={bucketNames}
+              selectedBucket={selectedBucket}
+              onBucketChange={handleBucketChange}
               projectId={projectId}
               sidebar={
                 <Sidebar

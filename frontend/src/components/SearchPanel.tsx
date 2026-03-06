@@ -2,18 +2,21 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../api';
 import type { DataStoreStatus, DataStoreDocument, ImportOperationStatus, ImportHistoryEntry } from '../types';
-import { Loader, AlertTriangle, CheckCircle, XCircle, RefreshCw, BrushCleaning, Trash2, Upload, Plus, ExternalLink, ChevronDown, ChevronRight, Clock, Eye, X } from 'lucide-react';
+import { Loader, AlertTriangle, CheckCircle, XCircle, RefreshCw, BrushCleaning, Trash2, Upload, Plus, ChevronDown, ChevronRight, Clock, Eye, X } from 'lucide-react';
+import { BucketSelector } from './BucketSelector';
+import { DataStoreSelector } from './DataStoreSelector';
+import type { DataStoreOption } from './DataStoreSelector';
 
 const STORAGE_KEY = 'kb-studio-search-selected';
 
-interface DataStoreOption {
-  dataStoreId: string;
-  displayName: string;
-  location: string;
-  engine: { engineId: string; displayName: string; solutionType: string; searchTier: string; searchAddOns: string[] } | null;
+interface SearchPanelProps {
+  bucketNames: string[];
+  selectedBucket: string;
+  onBucketChange: (bucket: string) => void;
+  projectId: string;
 }
 
-export const SearchPanel: React.FC = () => {
+export const SearchPanel: React.FC<SearchPanelProps> = ({ bucketNames, selectedBucket, onBucketChange, projectId }) => {
   const { t } = useTranslation('search');
   const tc = useTranslation('common').t;
   // Datastore list
@@ -167,7 +170,7 @@ export const SearchPanel: React.FC = () => {
     return () => { cancelled = true; clearInterval(interval); };
   }, [importOperation]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-fetch when selection changes
+  // Auto-fetch when selection or bucket changes
   useEffect(() => {
     if (dataStoreId) {
       setStatus(null);
@@ -178,7 +181,7 @@ export const SearchPanel: React.FC = () => {
       fetchDocuments();
       fetchImportHistory();
     }
-  }, [dataStoreId, location]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [dataStoreId, location, selectedBucket]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSelectChange = (value: string) => {
     if (value === '__new__') {
@@ -312,38 +315,26 @@ export const SearchPanel: React.FC = () => {
       {/* Datastore selection */}
       <div className="vais-section">
         <div className="vais-section-header">
-          <h2>{t('datastore')}</h2>
-          {status?.consoleUrl && !showCreateForm && (
-            <a className="btn btn-outline" href={status.consoleUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.85rem', padding: '4px 12px' }}>
-              <ExternalLink size={14} /> {t('viewInConsole')}
-            </a>
-          )}
+          <h2 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {t('datastoreFor')}
+            <BucketSelector
+              bucketNames={bucketNames}
+              selectedBucket={selectedBucket}
+              onBucketChange={onBucketChange}
+              projectId={projectId}
+              gcsConsoleTitle={t('viewInConsole')}
+            />
+          </h2>
         </div>
 
-        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-          <div className="form-group" style={{ flex: 1, minWidth: 250, marginBottom: 0 }}>
-            <label>{t('datastore')}</label>
-            {dataStoresLoading ? (
-              <div className="form-control" style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-secondary)' }}>
-                <Loader size={14} className="spinner" /> {tc('loading')}
-              </div>
-            ) : (
-              <select
-                className="form-control"
-                value={showCreateForm ? '__new__' : selectedKey}
-                onChange={e => handleSelectChange(e.target.value)}
-              >
-                <option value="" disabled>{t('selectDatastore')}</option>
-                {dataStores.map(ds => (
-                  <option key={`${ds.location}/${ds.dataStoreId}`} value={`${ds.location}/${ds.dataStoreId}`}>
-                    {ds.displayName} ({ds.location}) — {ds.dataStoreId}
-                  </option>
-                ))}
-                <option value="__new__">{t('createNew')}</option>
-              </select>
-            )}
-          </div>
-        </div>
+        <DataStoreSelector
+          dataStores={dataStores}
+          loading={dataStoresLoading}
+          selectedKey={showCreateForm ? '__new__' : selectedKey}
+          onChange={handleSelectChange}
+          showCreateOption
+          consoleUrl={!showCreateForm ? status?.consoleUrl : null}
+        />
 
         {/* Create form */}
         {showCreateForm && (

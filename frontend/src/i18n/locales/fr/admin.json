@@ -1,5 +1,7 @@
 {
   "folderManagement": "Gestion des dossiers",
+  "folderManagementFor": "Gestion des dossiers pour",
+  "viewInConsole": "Voir dans la Console",
   "newFolder": "Nouveau dossier",
   "newFolderPrompt": "Nom du nouveau dossier :",
   "renameFolderPrompt": "Nouveau nom du dossier :",
@@ -24,8 +26,8 @@
   "colError": "Erreur",
   "dangerZone": "Zone dangereuse",
   "dangerZoneDesc": "Supprimer définitivement tous les fichiers et métadonnées de la base de connaissances.",
-  "confirmDeleteAll": "Supprimer TOUS les fichiers de la base de connaissances ?",
-  "confirmDeleteAllIrreversible": "Cette action est irréversible. Confirmer la suppression ?",
+  "confirmDeleteAll": "Supprimer TOUS les fichiers de la base de connaissances {{bucket}} ?",
+  "confirmDeleteAllIrreversible": "Cette action est irréversible. Confirmer la suppression de tous les fichiers de {{bucket}} ?",
   "deletingAll": "Suppression en cours...",
   "deleteAll": "Supprimer tous les fichiers"
 }

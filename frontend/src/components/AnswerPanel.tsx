@@ -4,6 +4,8 @@ import Markdown from 'react-markdown';
 import { api } from '../api';
 import type { AnswerQueryResponse } from '../types';
 import { Loader, SendHorizontal, ExternalLink } from 'lucide-react';
+import { DataStoreSelector } from './DataStoreSelector';
+import type { DataStoreOption } from './DataStoreSelector';
 
 const STORAGE_KEY = 'kb-studio-answer-datastore';
 
@@ -15,16 +17,12 @@ interface EngineInfo {
   searchAddOns: string[];
 }
 
-interface DataStoreOption {
-  dataStoreId: string;
-  displayName: string;
-  location: string;
-  engine: EngineInfo | null;
+interface AnswerPanelProps {
+  projectId: string;
 }
 
-export const AnswerPanel: React.FC = () => {
+export const AnswerPanel: React.FC<AnswerPanelProps> = ({ projectId }) => {
   const { t } = useTranslation('answer');
-  const tc = useTranslation('common').t;
   const [dataStores, setDataStores] = useState<DataStoreOption[]>([]);
   const [dataStoresLoading, setDataStoresLoading] = useState(true);
   const [dataStoreId, setDataStoreId] = useState('');
@@ -117,26 +115,14 @@ export const AnswerPanel: React.FC = () => {
           <h2>{t('search')}</h2>
         </div>
 
-        <div className="form-group" style={{ marginBottom: 16 }}>
-          <label>{t('datastore')}</label>
-          {dataStoresLoading ? (
-            <div className="form-control" style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-secondary)' }}>
-              <Loader size={14} className="spinner" /> {tc('loading')}
-            </div>
-          ) : (
-            <select
-              className="form-control"
-              value={selectedKey}
-              onChange={e => handleSelectChange(e.target.value)}
-            >
-              <option value="" disabled>{t('selectDatastore')}</option>
-              {dataStores.map(ds => (
-                <option key={`${ds.location}/${ds.dataStoreId}`} value={`${ds.location}/${ds.dataStoreId}`}>
-                  {ds.displayName} ({ds.location}) — {ds.dataStoreId}
-                </option>
-              ))}
-            </select>
-          )}
+        <div style={{ marginBottom: 16 }}>
+          <DataStoreSelector
+            dataStores={dataStores}
+            loading={dataStoresLoading}
+            selectedKey={selectedKey}
+            onChange={handleSelectChange}
+            consoleUrl={dataStoreId && projectId ? `https://console.cloud.google.com/gen-app-builder/locations/${location}/collections/default_collection/data-stores/${dataStoreId}/data/activities?project=${projectId}` : null}
+          />
         </div>
 
         {/* Query input */}
