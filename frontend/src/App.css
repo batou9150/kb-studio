@@ -106,6 +106,10 @@ body {
   overflow: hidden;
 }
 
+.main-content.scrollable {
+  overflow-y: auto;
+}
+
 /* Explorer Sidebar */
 .explorer-sidebar {
   width: var(--sidebar-width);
@@ -729,7 +733,6 @@ textarea.form-control {
 .admin-panel {
   flex: 1;
   padding: 32px;
-  overflow-y: auto;
   max-width: 800px;
   margin: 0 auto;
 }
@@ -753,7 +756,6 @@ textarea.form-control {
 .vais-panel {
   flex: 1;
   padding: 32px;
-  overflow-y: auto;
 }
 
 .vais-section {
@@ -856,7 +858,6 @@ textarea.form-control {
 .answer-panel {
   flex: 1;
   padding: 32px;
-  overflow-y: auto;
 }
 
 .answer-text {
