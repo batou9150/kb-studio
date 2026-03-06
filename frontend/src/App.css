@@ -54,6 +54,23 @@ body {
   gap: 24px;
 }
 
+.header-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+
+.lang-switcher {
+  padding: 4px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--surface-color);
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .logo {
   font-size: 1.25rem;
   font-weight: 700;

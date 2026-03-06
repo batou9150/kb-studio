@@ -1,0 +1,29 @@
+{
+  "cancel": "Cancel",
+  "close": "Close",
+  "save": "Save",
+  "delete": "Delete",
+  "rename": "Rename",
+  "confirm": "Confirm",
+  "loading": "Loading...",
+  "refresh": "Refresh",
+  "download": "Download",
+  "viewMetadata": "View metadata",
+  "error": {
+    "loadData": "Error loading data.",
+    "upload": "Error uploading files.",
+    "update": "Error updating.",
+    "delete": "Error deleting.",
+    "rename": "Error renaming.",
+    "move": "Error moving file.",
+    "createFolder": "Error creating folder.",
+    "analysis": "Error starting analysis.",
+    "batchFailed": "Batch analysis failed.",
+    "loadDetails": "Error loading details.",
+    "renameFolder": "Error renaming folder.",
+    "deleteFolder": "Error deleting folder."
+  },
+  "success": {
+    "metadataUpdated": "Metadata updated successfully."
+  }
+}

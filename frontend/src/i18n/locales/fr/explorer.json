@@ -1,0 +1,30 @@
+{
+  "folders": "Dossiers",
+  "newFolder": "Nouveau Dossier",
+  "newFolderPrompt": "Nom du nouveau dossier:",
+  "root": "Racine",
+  "openGcsConsole": "Ouvrir dans la console GCS",
+  "searchPlaceholder": "Rechercher un fichier...",
+  "analyzeAllTooltip": "Analyser tous les fichiers avec Gemini",
+  "analyzeAll": "Analyser tout",
+  "analyzePreparing": "Préparation de l'analyse...",
+  "analyzeStarting": "Analyse en cours...",
+  "analyzeRunning": "Analyse... {{done}}/{{total}}",
+  "import": "Importer",
+  "importFiles": "Fichiers",
+  "importFolder": "Dossier",
+  "dropFiles": "Déposez les fichiers ici pour les téléverser",
+  "emptyFolder": "Ce dossier est vide",
+  "emptyFolderHint": "Glissez-déposez des fichiers ici ou utilisez le bouton Importer.",
+  "colFolder": "Dossier",
+  "colName": "Nom",
+  "colModified": "Modifié le",
+  "colActions": "Actions",
+  "confirmDelete": "Voulez-vous vraiment supprimer ce fichier ?",
+  "nav": {
+    "knowledgeBase": "Knowledge Base",
+    "indexation": "Indexation",
+    "search": "Search",
+    "admin": "Administration"
+  }
+}

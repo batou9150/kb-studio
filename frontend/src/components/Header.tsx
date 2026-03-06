@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Database, FolderOpen, TableOfContents, Search, Settings } from 'lucide-react';
 
 interface HeaderProps {
@@ -8,6 +9,14 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, onViewChange }) => {
+  const { t, i18n } = useTranslation('explorer');
+
+  const changeLanguage = (lng: string) => {
+    i18n.changeLanguage(lng);
+    localStorage.setItem('kb-studio-lang', lng);
+    document.documentElement.lang = lng;
+  };
+
   return (
     <header className="header">
       <div className="header-left">
@@ -27,30 +36,41 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, onViewC
           onClick={() => { onNavigate(''); onViewChange('explorer'); }}
         >
           <FolderOpen size={16} />
-          Knowledge Base
+          {t('nav.knowledgeBase')}
         </button>
         <button
           className={`header-tab ${currentView === 'index' ? 'active' : ''}`}
           onClick={() => onViewChange('index')}
         >
           <TableOfContents size={16} />
-          Indexation
+          {t('nav.indexation')}
         </button>
         <button
           className={`header-tab ${currentView === 'answer' ? 'active' : ''}`}
           onClick={() => onViewChange('answer')}
         >
           <Search size={16} />
-          Search
+          {t('nav.search')}
         </button>
         <button
           className={`header-tab ${currentView === 'admin' ? 'active' : ''}`}
           onClick={() => onViewChange('admin')}
         >
           <Settings size={16} />
-          Administration
+          {t('nav.admin')}
         </button>
       </nav>
+
+      <div className="header-right">
+        <select
+          className="lang-switcher"
+          value={i18n.language}
+          onChange={(e) => changeLanguage(e.target.value)}
+        >
+          <option value="fr">FR</option>
+          <option value="en">EN</option>
+        </select>
+      </div>
     </header>
   );
 };

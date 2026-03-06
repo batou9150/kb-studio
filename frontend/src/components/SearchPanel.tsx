@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api';
 import type { DataStoreStatus, DataStoreDocument, ImportOperationStatus, ImportHistoryEntry } from '../types';
 import { Loader, AlertTriangle, CheckCircle, XCircle, RefreshCw, BrushCleaning, Trash2, Upload, Plus, ExternalLink, ChevronDown, ChevronRight, Clock, Eye, X } from 'lucide-react';
@@ -13,6 +14,8 @@ interface DataStoreOption {
 }
 
 export const SearchPanel: React.FC = () => {
+  const { t } = useTranslation('search');
+  const tc = useTranslation('common').t;
   // Datastore list
   const [dataStores, setDataStores] = useState<DataStoreOption[]>([]);
   const [dataStoresLoading, setDataStoresLoading] = useState(true);
@@ -263,8 +266,8 @@ export const SearchPanel: React.FC = () => {
   };
 
   const handlePurge = async () => {
-    if (!window.confirm('Purger tous les documents du datastore ?')) return;
-    if (!window.confirm('Cette action est irréversible. Confirmer la purge ?')) return;
+    if (!window.confirm(t('confirmPurge'))) return;
+    if (!window.confirm(t('confirmPurgeIrreversible'))) return;
     setActionLoading('purge');
     setError(null);
     try {
@@ -280,8 +283,8 @@ export const SearchPanel: React.FC = () => {
   };
 
   const handleDeleteDataStore = async () => {
-    if (!window.confirm(`Supprimer le datastore "${dataStoreId}" et son application associée ?`)) return;
-    if (!window.confirm('Cette action est irréversible. Confirmer la suppression ?')) return;
+    if (!window.confirm(t('confirmDeleteDatastore', { id: dataStoreId }))) return;
+    if (!window.confirm(t('confirmDeleteIrreversible'))) return;
     setActionLoading('delete');
     setError(null);
     try {
@@ -309,20 +312,20 @@ export const SearchPanel: React.FC = () => {
       {/* Datastore selection */}
       <div className="vais-section">
         <div className="vais-section-header">
-          <h2>Datastore</h2>
+          <h2>{t('datastore')}</h2>
           {status?.consoleUrl && !showCreateForm && (
             <a className="btn btn-outline" href={status.consoleUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.85rem', padding: '4px 12px' }}>
-              <ExternalLink size={14} /> Voir dans la Console
+              <ExternalLink size={14} /> {t('viewInConsole')}
             </a>
           )}
         </div>
 
         <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
           <div className="form-group" style={{ flex: 1, minWidth: 250, marginBottom: 0 }}>
-            <label>Datastore</label>
+            <label>{t('datastore')}</label>
             {dataStoresLoading ? (
               <div className="form-control" style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-secondary)' }}>
-                <Loader size={14} className="spinner" /> Chargement...
+                <Loader size={14} className="spinner" /> {tc('loading')}
               </div>
             ) : (
               <select
@@ -330,13 +333,13 @@ export const SearchPanel: React.FC = () => {
                 value={showCreateForm ? '__new__' : selectedKey}
                 onChange={e => handleSelectChange(e.target.value)}
               >
-                <option value="" disabled>Sélectionner un datastore...</option>
+                <option value="" disabled>{t('selectDatastore')}</option>
                 {dataStores.map(ds => (
                   <option key={`${ds.location}/${ds.dataStoreId}`} value={`${ds.location}/${ds.dataStoreId}`}>
                     {ds.displayName} ({ds.location}) — {ds.dataStoreId}
                   </option>
                 ))}
-                <option value="__new__">+ Créer un nouveau datastore</option>
+                <option value="__new__">{t('createNew')}</option>
               </select>
             )}
           </div>
@@ -347,18 +350,18 @@ export const SearchPanel: React.FC = () => {
           <div style={{ marginTop: 16, padding: 16, border: '1px solid var(--border-color)', borderRadius: 8, background: 'var(--bg-color)' }}>
             <div style={{ display: 'flex', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
               <div className="form-group" style={{ flex: 1, minWidth: 180, marginBottom: 0 }}>
-                <label>Nom du Datastore</label>
+                <label>{t('datastoreName')}</label>
                 <input className="form-control" value={newDisplayName} onChange={e => {
                   setNewDisplayName(e.target.value);
                   setNewId(e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '_' + Date.now());
-                }} placeholder="Ma Base de Connaissances" />
+                }} placeholder={t('datastoreNamePlaceholder')} />
               </div>
               <div className="form-group" style={{ flex: 1, minWidth: 180, marginBottom: 0 }}>
-                <label>ID du Datastore</label>
-                <input className="form-control" value={newId} onChange={e => setNewId(e.target.value)} placeholder="my-kb-datastore" />
+                <label>{t('datastoreId')}</label>
+                <input className="form-control" value={newId} onChange={e => setNewId(e.target.value)} placeholder={t('datastoreIdPlaceholder')} />
               </div>
               <div className="form-group" style={{ minWidth: 120, marginBottom: 0 }}>
-                <label>Région</label>
+                <label>{t('region')}</label>
                 <select className="form-control" value={newLocation} onChange={e => setNewLocation(e.target.value)}>
                   <option value="global">Global</option>
                   <option value="eu">EU</option>
@@ -372,14 +375,14 @@ export const SearchPanel: React.FC = () => {
               onClick={() => setShowAdvanced(!showAdvanced)}
             >
               {showAdvanced ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-              Options avancées
+              {t('advancedOptions')}
             </div>
 
             {showAdvanced && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 16 }}>
                 {/* Parsing config */}
                 <fieldset style={{ flex: 1, minWidth: 220, border: '1px solid var(--border-color)', borderRadius: 6, padding: '12px 16px' }}>
-                  <legend style={{ fontSize: '0.85rem', fontWeight: 600, padding: '0 4px' }}>Parsing par défaut</legend>
+                  <legend style={{ fontSize: '0.85rem', fontWeight: 600, padding: '0 4px' }}>{t('parsingDefault')}</legend>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
                       <input type="radio" name="parser" checked={defaultParser === 'digital'} onChange={() => setDefaultParser('digital')} /> Digital
@@ -390,7 +393,7 @@ export const SearchPanel: React.FC = () => {
                     {defaultParser === 'ocr' && (
                       <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', marginLeft: 20 }}>
                         <input type="checkbox" checked={ocrUseNativeText} onChange={e => setOcrUseNativeText(e.target.checked)} />
-                        Utiliser le texte natif si disponible
+                        {t('useNativeText')}
                       </label>
                     )}
                     <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
@@ -400,11 +403,11 @@ export const SearchPanel: React.FC = () => {
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginLeft: 20 }}>
                         <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
                           <input type="checkbox" checked={layoutEnableTableAnnotation} onChange={e => setLayoutEnableTableAnnotation(e.target.checked)} />
-                          Annotation des tableaux
+                          {t('tableAnnotation')}
                         </label>
                         <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
                           <input type="checkbox" checked={layoutEnableImageAnnotation} onChange={e => setLayoutEnableImageAnnotation(e.target.checked)} />
-                          Annotation des images
+                          {t('imageAnnotation')}
                         </label>
                       </div>
                     )}
@@ -413,16 +416,16 @@ export const SearchPanel: React.FC = () => {
 
                 {/* Chunking config */}
                 <fieldset style={{ flex: 1, minWidth: 220, border: '1px solid var(--border-color)', borderRadius: 6, padding: '12px 16px' }}>
-                  <legend style={{ fontSize: '0.85rem', fontWeight: 600, padding: '0 4px' }}>Chunking (RAG)</legend>
+                  <legend style={{ fontSize: '0.85rem', fontWeight: 600, padding: '0 4px' }}>{t('chunkingRag')}</legend>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
                       <input type="checkbox" checked={enableChunking} onChange={e => setEnableChunking(e.target.checked)} />
-                      Activer la configuration avancée de chunking
+                      {t('enableChunking')}
                     </label>
                     {enableChunking && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginLeft: 20 }}>
                         <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label style={{ fontSize: '0.85rem' }}>Taille des chunks</label>
+                          <label style={{ fontSize: '0.85rem' }}>{t('chunkSize')}</label>
                           <input
                             type="number"
                             className="form-control"
@@ -435,7 +438,7 @@ export const SearchPanel: React.FC = () => {
                         </div>
                         <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
                           <input type="checkbox" checked={includeAncestorHeadings} onChange={e => setIncludeAncestorHeadings(e.target.checked)} />
-                          Inclure les titres parents
+                          {t('includeAncestorHeadings')}
                         </label>
                       </div>
                     )}
@@ -444,16 +447,16 @@ export const SearchPanel: React.FC = () => {
 
                 {/* App (engine) config */}
                 <fieldset style={{ flex: 1, minWidth: 220, border: '1px solid var(--border-color)', borderRadius: 6, padding: '12px 16px' }}>
-                  <legend style={{ fontSize: '0.85rem', fontWeight: 600, padding: '0 4px' }}>Application Search</legend>
+                  <legend style={{ fontSize: '0.85rem', fontWeight: 600, padding: '0 4px' }}>{t('appSearch')}</legend>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
                       <input type="checkbox" checked={createApp} onChange={e => setCreateApp(e.target.checked)} />
-                      Créer une application Search
+                      {t('createSearchApp')}
                     </label>
                     {createApp && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginLeft: 20 }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                          <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>Niveau de recherche</span>
+                          <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>{t('searchTier')}</span>
                           <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
                             <input type="radio" name="searchTier" checked={appSearchTier === 'standard'} onChange={() => setAppSearchTier('standard')} /> Standard
                           </label>
@@ -463,7 +466,7 @@ export const SearchPanel: React.FC = () => {
                         </div>
                         <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
                           <input type="checkbox" checked={appEnableLlm} onChange={e => setAppEnableLlm(e.target.checked)} />
-                          Activer le LLM (recherche IA)
+                          {t('enableLlm')}
                         </label>
                       </div>
                     )}
@@ -475,10 +478,10 @@ export const SearchPanel: React.FC = () => {
             <div style={{ display: 'flex', gap: 12 }}>
               <button className="btn btn-primary" onClick={handleCreate} disabled={!newId || !newDisplayName || isActionLoading}>
                 {actionLoading === 'create' ? <Loader size={16} className="spinner" /> : <Plus size={16} />}
-                Créer
+                {t('create')}
               </button>
               <button className="btn btn-outline" onClick={() => setShowCreateForm(false)}>
-                Annuler
+                {tc('cancel')}
               </button>
             </div>
           </div>
@@ -495,39 +498,39 @@ export const SearchPanel: React.FC = () => {
       {dataStoreId && (
         <div className="vais-section">
           <div className="vais-section-header">
-            <h2>Statut</h2>
-            <button className="icon-btn" title="Rafraîchir" onClick={fetchStatus} disabled={loading}>
+            <h2>{t('status')}</h2>
+            <button className="icon-btn" title={tc('refresh')} onClick={fetchStatus} disabled={loading}>
               <RefreshCw size={18} className={loading ? 'spinner' : ''} />
             </button>
           </div>
 
           {loading && !status ? (
-            <div className="loading"><Loader size={20} className="spinner" /> Chargement...</div>
+            <div className="loading"><Loader size={20} className="spinner" /> {tc('loading')}</div>
           ) : status ? (
             <table className="file-table">
               <tbody>
-                <tr><td style={{ fontWeight: 600 }}>Documents dans le datastore</td><td>{status.documentCount}</td></tr>
-                <tr><td style={{ fontWeight: 600 }}>Entrées dans kb.ndjson</td><td>{status.kbEntryCount}</td></tr>
-                <tr><td style={{ fontWeight: 600 }}>kb.ndjson modifié le</td><td>{status.kbNdjsonUpdatedAt ? new Date(status.kbNdjsonUpdatedAt).toLocaleString() : '—'}</td></tr>
-                <tr><td style={{ fontWeight: 600 }}>Dernier import</td><td>{status.lastImportTime ? new Date(status.lastImportTime).toLocaleString() : '—'}</td></tr>
+                <tr><td style={{ fontWeight: 600 }}>{t('documentCount')}</td><td>{status.documentCount}</td></tr>
+                <tr><td style={{ fontWeight: 600 }}>{t('kbEntryCount')}</td><td>{status.kbEntryCount}</td></tr>
+                <tr><td style={{ fontWeight: 600 }}>{t('kbUpdatedAt')}</td><td>{status.kbNdjsonUpdatedAt ? new Date(status.kbNdjsonUpdatedAt).toLocaleString() : '—'}</td></tr>
+                <tr><td style={{ fontWeight: 600 }}>{t('lastImport')}</td><td>{status.lastImportTime ? new Date(status.lastImportTime).toLocaleString() : '—'}</td></tr>
                 <tr>
-                  <td style={{ fontWeight: 600 }}>Synchronisation</td>
+                  <td style={{ fontWeight: 600 }}>{t('sync')}</td>
                   <td>
                     {!status.lastImportDone ? (
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--primary-color)', fontWeight: 500 }}>
-                        <Loader size={16} className="spinner" /> Import en cours
+                        <Loader size={16} className="spinner" /> {t('syncImporting')}
                       </span>
                     ) : status.lastImportFailureCount > 0 ? (
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--danger-color)', fontWeight: 500 }}>
-                        <XCircle size={16} /> {status.lastImportFailureCount} document{status.lastImportFailureCount > 1 ? 's' : ''} en erreur{status.lastImportFailureCount > 1 ? 's' : ''} à corriger
+                        <XCircle size={16} /> {t('syncError', { count: status.lastImportFailureCount })}
                       </span>
                     ) : status.isUpToDate ? (
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--success-color)', fontWeight: 500 }}>
-                        <CheckCircle size={16} /> À jour
+                        <CheckCircle size={16} /> {t('syncUpToDate')}
                       </span>
                     ) : (
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--warning-color)', fontWeight: 500 }}>
-                        <AlertTriangle size={16} /> Nécessite un ré-import
+                        <AlertTriangle size={16} /> {t('syncNeedsReimport')}
                       </span>
                     )}
                   </td>
@@ -542,30 +545,30 @@ export const SearchPanel: React.FC = () => {
       {status?.exists && (
         <div className="vais-section">
           <div className="vais-section-header">
-            <h2>Import</h2>
+            <h2>{t('import')}</h2>
           </div>
           <div style={{ display: 'flex', gap: 12 }}>
             <button className="btn btn-primary" onClick={() => handleImport('INCREMENTAL')} disabled={isActionLoading}>
               {actionLoading === 'import-INCREMENTAL' ? <Loader size={16} className="spinner" /> : <Upload size={16} />}
-              Import (Incrémental)
+              {t('importIncremental')}
             </button>
             <button className="btn btn-outline" onClick={() => handleImport('FULL')} disabled={isActionLoading}>
               {actionLoading === 'import-FULL' ? <Loader size={16} className="spinner" /> : <Upload size={16} />}
-              Import (Full)
+              {t('importFull')}
             </button>
           </div>
           {importOperation && (
             <div style={{ marginTop: 12, padding: '12px 16px', background: 'var(--bg-secondary, #f8f9fa)', border: '1px solid var(--border-color)', borderRadius: 6, fontSize: '0.9rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: importProgress && importProgress.totalCount > 0 ? 8 : 0 }}>
                 <Loader size={14} className="spinner" />
-                <span style={{ fontWeight: 500 }}>Import en cours...</span>
+                <span style={{ fontWeight: 500 }}>{t('importInProgress')}</span>
               </div>
               {importProgress && importProgress.totalCount > 0 && (
                 <div style={{ display: 'flex', gap: 16, color: 'var(--text-secondary)' }}>
-                  <span>Traités {importProgress.successCount + importProgress.failureCount}/{importProgress.totalCount}</span>
-                  <span style={{ color: 'var(--success-color)' }}>Succès {importProgress.successCount}</span>
+                  <span>{t('processed')} {importProgress.successCount + importProgress.failureCount}/{importProgress.totalCount}</span>
+                  <span style={{ color: 'var(--success-color)' }}>{t('success')} {importProgress.successCount}</span>
                   {importProgress.failureCount > 0 && (
-                    <span style={{ color: 'var(--danger-color)' }}>Échecs {importProgress.failureCount}</span>
+                    <span style={{ color: 'var(--danger-color)' }}>{t('failures')} {importProgress.failureCount}</span>
                   )}
                 </div>
               )}
@@ -579,7 +582,7 @@ export const SearchPanel: React.FC = () => {
             >
               {showHistory ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
               <Clock size={14} />
-              Historique des imports
+              {t('importHistory')}
             </div>
             {showHistory && (
               <div style={{ marginTop: 8 }}>
@@ -587,11 +590,11 @@ export const SearchPanel: React.FC = () => {
                   <table className="file-table" style={{ fontSize: '0.85rem' }}>
                     <thead>
                       <tr>
-                        <th>Date</th>
-                        <th>Statut</th>
-                        <th>Succès</th>
-                        <th>Échecs</th>
-                        <th>Total</th>
+                        <th>{t('date')}</th>
+                        <th>{t('status')}</th>
+                        <th>{t('success')}</th>
+                        <th>{t('failures')}</th>
+                        <th>{t('total')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -601,15 +604,15 @@ export const SearchPanel: React.FC = () => {
                           <td>
                             {!op.done ? (
                               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--primary-color)' }}>
-                                <Loader size={12} className="spinner" /> En cours
+                                <Loader size={12} className="spinner" /> {t('inProgress')}
                               </span>
                             ) : op.error ? (
                               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--danger-color)' }}>
-                                <XCircle size={12} /> Erreur
+                                <XCircle size={12} /> {t('error')}
                               </span>
                             ) : (
                               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--success-color)' }}>
-                                <CheckCircle size={12} /> Terminé
+                                <CheckCircle size={12} /> {t('done')}
                               </span>
                             )}
                           </td>
@@ -621,7 +624,7 @@ export const SearchPanel: React.FC = () => {
                     </tbody>
                   </table>
                 ) : (
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: '4px 0 0' }}>Aucun import précédent.</p>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: '4px 0 0' }}>{t('noImport')}</p>
                 )}
               </div>
             )}
@@ -633,8 +636,8 @@ export const SearchPanel: React.FC = () => {
       {status?.exists && (
         <div className="vais-section">
           <div className="vais-section-header">
-            <h2>Documents ({status.documentCount})</h2>
-            <button className="icon-btn" title="Rafraîchir" onClick={() => fetchDocuments()}>
+            <h2>{t('documents')} ({status.documentCount})</h2>
+            <button className="icon-btn" title={tc('refresh')} onClick={() => fetchDocuments()}>
               <RefreshCw size={18} />
             </button>
           </div>
@@ -644,10 +647,10 @@ export const SearchPanel: React.FC = () => {
               <table className="file-table">
                 <thead>
                   <tr>
-                    <th>ID</th>
-                    <th>URI</th>
-                    <th>Statut indexation</th>
-                    <th>Actions</th>
+                    <th>{t('colId')}</th>
+                    <th>{t('colUri')}</th>
+                    <th>{t('colIndexStatus')}</th>
+                    <th>{t('colActions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -666,21 +669,21 @@ export const SearchPanel: React.FC = () => {
                         <td>
                           {doc.indexState === 'indexed' ? (
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--success-color)' }}>
-                              <CheckCircle size={14} /> Indexé
+                              <CheckCircle size={14} /> {t('indexed')}
                             </span>
                           ) : doc.indexState === 'error' ? (
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--danger-color)' }}>
-                              <XCircle size={14} /> Erreur
+                              <XCircle size={14} /> {t('error')}
                             </span>
                           ) : (
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--warning-color)' }} title={doc.indexPendingMessage || undefined}>
-                              <Loader size={14} className="spinner" /> En attente
+                              <Loader size={14} className="spinner" /> {t('pending')}
                             </span>
                           )}
                         </td>
                         <td>
                           <button className="btn btn-outline" style={{ fontSize: '0.8rem', padding: '4px 10px' }} onClick={() => setSelectedDoc(doc)}>
-                            <Eye size={14} /> Voir les métadonnées
+                            <Eye size={14} /> {tc('viewMetadata')}
                           </button>
                         </td>
                       </tr>
@@ -690,12 +693,12 @@ export const SearchPanel: React.FC = () => {
               </table>
               {nextPageToken && (
                 <div style={{ marginTop: 16, textAlign: 'center' }}>
-                  <button className="btn btn-outline" onClick={() => fetchDocuments(true)}>Charger plus</button>
+                  <button className="btn btn-outline" onClick={() => fetchDocuments(true)}>{t('loadMore')}</button>
                 </div>
               )}
             </>
           ) : (
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Aucun document dans le datastore.</p>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{t('noDocuments')}</p>
           )}
         </div>
       )}
@@ -705,17 +708,17 @@ export const SearchPanel: React.FC = () => {
         <div className="danger-zone">
           <div className="danger-zone-header">
             <AlertTriangle size={20} />
-            <h3>Zone dangereuse</h3>
+            <h3>{t('dangerZone')}</h3>
           </div>
-          <p>Ces actions sont irréversibles. Les fichiers dans GCS ne sont pas affectés.</p>
+          <p>{t('dangerZoneDesc')}</p>
           <div style={{ display: 'flex', gap: 12 }}>
             <button className="btn btn-danger" onClick={handlePurge} disabled={isActionLoading}>
               {actionLoading === 'purge' ? <Loader size={16} className="spinner" /> : <BrushCleaning size={16} />}
-              {actionLoading === 'purge' ? 'Purge en cours...' : 'Purger tous les documents'}
+              {actionLoading === 'purge' ? t('purging') : t('purgeAll')}
             </button>
             <button className="btn btn-danger" onClick={handleDeleteDataStore} disabled={isActionLoading}>
               {actionLoading === 'delete' ? <Loader size={16} className="spinner" /> : <Trash2 size={16} />}
-              {actionLoading === 'delete' ? 'Suppression en cours...' : 'Supprimer le datastore'}
+              {actionLoading === 'delete' ? t('deleting') : t('deleteDatastore')}
             </button>
           </div>
         </div>
@@ -726,7 +729,7 @@ export const SearchPanel: React.FC = () => {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setSelectedDoc(null)}>
           <div style={{ background: 'var(--bg-color, #fff)', borderRadius: 8, padding: 24, maxWidth: 600, width: '90%', maxHeight: '80vh', overflow: 'auto', position: 'relative' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ margin: 0, fontSize: '1rem' }}>Document {selectedDoc.id}</h3>
+              <h3 style={{ margin: 0, fontSize: '1rem' }}>{t('document')} {selectedDoc.id}</h3>
               <button className="icon-btn" onClick={() => setSelectedDoc(null)}><X size={18} /></button>
             </div>
             <pre style={{ background: 'var(--bg-secondary, #f8f9fa)', padding: 16, borderRadius: 6, overflow: 'auto', fontSize: '0.85rem', margin: 0 }}>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { X, Save, FileText, Pencil, Check, Loader, Sparkles } from 'lucide-react';
 import type { FileItem } from '../types';
 import { api } from '../api';
@@ -11,25 +12,11 @@ interface DetailsPanelProps {
   onRenameFile: (id: string, newName: string) => void;
 }
 
-const CATEGORY_OPTIONS: { value: string; label: string }[] = [
-  { value: '', label: '— Non défini —' },
-  { value: 'faq', label: 'FAQ / Questions fréquentes' },
-  { value: 'how_to', label: 'Guide pratique / How-to' },
-  { value: 'manual', label: 'Manuel / Documentation technique' },
-  { value: 'troubleshooting', label: 'Dépannage / Troubleshooting' },
-  { value: 'meeting_minutes', label: 'Compte-rendu de réunion' },
-  { value: 'policy', label: 'Politique / Règlement' },
-  { value: 'sop', label: 'Procédure opérationnelle (SOP)' },
-  { value: 'form', label: 'Formulaire' },
-  { value: 'report', label: 'Rapport' },
-  { value: 'release_notes', label: 'Notes de version' },
-  { value: 'presentation', label: 'Présentation' },
-  { value: 'memo', label: 'Note de service / Mémo' },
-  { value: 'contract', label: 'Contrat / Accord' },
-  { value: 'whitepaper', label: 'Livre blanc' },
-  { value: 'marketing_asset', label: 'Support marketing' },
-  { value: 'other', label: 'Autre' },
-];
+const CATEGORY_KEYS = [
+  '', 'faq', 'how_to', 'manual', 'troubleshooting', 'meeting_minutes',
+  'policy', 'sop', 'form', 'report', 'release_notes', 'presentation',
+  'memo', 'contract', 'whitepaper', 'marketing_asset', 'other',
+] as const;
 
 const getPreviewType = (contentType: string): 'image' | 'pdf' | 'text' | 'other' => {
   if (contentType.startsWith('image/')) return 'image';
@@ -41,6 +28,8 @@ const getPreviewType = (contentType: string): 'image' | 'pdf' | 'text' | 'other'
 export const DetailsPanel: React.FC<DetailsPanelProps> = ({
   file, isOpen, onClose, onUpdateMetadata, onRenameFile
 }) => {
+  const { t } = useTranslation('details');
+  const tc = useTranslation('common').t;
   const [description, setDescription] = useState('');
   const [date, setDate] = useState('');
   const [category, setCategory] = useState('');
@@ -98,10 +87,15 @@ export const DetailsPanel: React.FC<DetailsPanelProps> = ({
       setDate(result.value_date);
       setCategory(result.category);
     } catch (err: any) {
-      alert('Erreur lors de l\'analyse : ' + (err.response?.data?.error || err.message));
+      alert(t('analyzeError', { error: err.response?.data?.error || err.message }));
     } finally {
       setAnalyzing(false);
     }
+  };
+
+  const getCategoryLabel = (key: string) => {
+    if (key === '') return t('categories.none');
+    return t(`categories.${key}`, { defaultValue: key });
   };
 
   return (
@@ -129,7 +123,7 @@ export const DetailsPanel: React.FC<DetailsPanelProps> = ({
               />
               <button
                 className="icon-btn"
-                title="Valider"
+                title={tc('confirm')}
                 onClick={() => {
                   if (fileName && fileName !== file.name) onRenameFile(file.id, fileName);
                   setEditingName(false);
@@ -143,7 +137,7 @@ export const DetailsPanel: React.FC<DetailsPanelProps> = ({
               <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={file.name}>
                 {file.name}
               </span>
-              <button className="icon-btn" title="Renommer" onClick={() => setEditingName(true)} style={{ flexShrink: 0 }}>
+              <button className="icon-btn" title={tc('rename')} onClick={() => setEditingName(true)} style={{ flexShrink: 0 }}>
                 <Pencil size={14} />
               </button>
             </>
@@ -176,21 +170,21 @@ export const DetailsPanel: React.FC<DetailsPanelProps> = ({
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-          <h3 style={{ fontSize: '1.1rem', margin: 0 }}>Métadonnées</h3>
+          <h3 style={{ fontSize: '1.1rem', margin: 0 }}>{t('metadata')}</h3>
           <button
             className="btn btn-outline"
             style={{ fontSize: '0.85rem', padding: '4px 12px' }}
             onClick={handleAnalyze}
             disabled={analyzing}
-            title="Analyser avec Gemini"
+            title={t('analyzeWithGemini')}
           >
             {analyzing ? <Loader size={14} className="spinner" /> : <Sparkles size={14} />}
-            Analyser
+            {t('analyze')}
           </button>
         </div>
 
         <div className="form-group">
-          <label htmlFor="value_date">Date de valeur</label>
+          <label htmlFor="value_date">{t('valueDate')}</label>
           <input
             type="date"
             id="value_date"
@@ -201,21 +195,21 @@ export const DetailsPanel: React.FC<DetailsPanelProps> = ({
         </div>
 
         <div className="form-group">
-          <label htmlFor="category">Catégorie</label>
+          <label htmlFor="category">{t('category')}</label>
           <select
             id="category"
             className="form-control"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
           >
-            {CATEGORY_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            {CATEGORY_KEYS.map(key => (
+              <option key={key} value={key}>{getCategoryLabel(key)}</option>
             ))}
           </select>
         </div>
 
         <div className="form-group">
-          <label htmlFor="description">Description</label>
+          <label htmlFor="description">{t('description')}</label>
           <textarea
             id="description"
             className="form-control"
@@ -225,7 +219,7 @@ export const DetailsPanel: React.FC<DetailsPanelProps> = ({
         </div>
 
         <button className="btn btn-primary" style={{ width: '100%' }} onClick={handleSave} disabled={!hasChanges}>
-          <Save size={16} /> Enregistrer les modifications
+          <Save size={16} /> {t('saveChanges')}
         </button>
       </div>
     </div>

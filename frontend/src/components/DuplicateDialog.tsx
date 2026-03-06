@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { AlertTriangle, X } from 'lucide-react';
 
 interface DuplicateDialogProps {
@@ -12,13 +13,16 @@ export const DuplicateDialog: React.FC<DuplicateDialogProps> = ({
   onOverwrite,
   onCancel,
 }) => {
+  const { t } = useTranslation('dialogs');
+  const tc = useTranslation('common').t;
+
   return (
     <div className="modal-overlay" onClick={onCancel}>
       <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div className="modal-title">
             <AlertTriangle size={20} color="var(--warning-color)" />
-            <span>Fichiers existants</span>
+            <span>{t('duplicate.title')}</span>
           </div>
           <button className="icon-btn" onClick={onCancel}>
             <X size={18} />
@@ -26,25 +30,21 @@ export const DuplicateDialog: React.FC<DuplicateDialogProps> = ({
         </div>
 
         <div className="modal-body">
-          <p>
-            {duplicates.length === 1
-              ? 'Le fichier suivant existe déjà dans ce dossier :'
-              : 'Les fichiers suivants existent déjà dans ce dossier :'}
-          </p>
+          <p>{t('duplicate.message', { count: duplicates.length })}</p>
           <ul className="duplicate-list">
             {duplicates.map((d) => (
               <li key={d.id}>{d.name}</li>
             ))}
           </ul>
-          <p>Voulez-vous remplacer {duplicates.length === 1 ? 'ce fichier' : 'ces fichiers'} ?</p>
+          <p>{t('duplicate.confirm', { count: duplicates.length })}</p>
         </div>
 
         <div className="modal-footer">
           <button className="btn btn-outline" onClick={onCancel}>
-            Annuler
+            {tc('cancel')}
           </button>
           <button className="btn btn-primary" onClick={onOverwrite}>
-            Remplacer
+            {t('duplicate.overwrite')}
           </button>
         </div>
       </div>

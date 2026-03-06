@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import './App.css';
 import { api } from './api';
 import type { FileItem } from './types';
@@ -14,6 +15,7 @@ import { AnswerPanel } from './components/AnswerPanel';
 import { Loader } from 'lucide-react';
 
 function App() {
+  const { t } = useTranslation();
   const [folders, setFolders] = useState<string[]>([]);
   const [currentFolder, setCurrentFolder] = useState<string>('');
   const [files, setFiles] = useState<FileItem[]>([]);
@@ -57,11 +59,11 @@ function App() {
       setFiles(filesData);
     } catch (error) {
       console.error('Error loading data:', error);
-      alert('Erreur lors du chargement des données.');
+      alert(t('error.loadData'));
     } finally {
       setLoading(false);
     }
-  }, [currentFolder, searchQuery]);
+  }, [currentFolder, searchQuery, t]);
 
   useEffect(() => {
     document.title = import.meta.env.VITE_APP_NAME || 'KB-Studio';
@@ -92,14 +94,14 @@ function App() {
   };
 
   const handleCreateFolder = async () => {
-    const folderName = prompt('Nom du nouveau dossier:');
+    const folderName = prompt(t('explorer:newFolderPrompt'));
     if (folderName) {
       try {
         const path = currentFolder ? `${currentFolder}${folderName}/` : `${folderName}/`;
         await api.createFolder(path);
         loadData();
       } catch (err) {
-        alert('Erreur lors de la création du dossier.');
+        alert(t('error.createFolder'));
       }
     }
   };
@@ -123,7 +125,7 @@ function App() {
       await api.uploadFiles(uploadFiles, targetFolder);
       await loadData();
     } catch (err) {
-      alert('Erreur lors du téléversement.');
+      alert(t('error.upload'));
     } finally {
       setLoading(false);
     }
@@ -159,7 +161,7 @@ function App() {
 
       await loadData();
     } catch (err) {
-      alert('Erreur lors du téléversement.');
+      alert(t('error.upload'));
     } finally {
       setLoading(false);
     }
@@ -179,10 +181,10 @@ function App() {
   const handleUpdateMetadata = async (id: string, description: string, date: string, category: string) => {
     try {
       await api.updateFileMetadata(id, description, date, category);
-      alert('Métadonnées mises à jour avec succès.');
+      alert(t('success.metadataUpdated'));
       loadData();
     } catch (err) {
-      alert('Erreur lors de la mise à jour.');
+      alert(t('error.update'));
     }
   };
 
@@ -193,7 +195,7 @@ function App() {
       setSelectedFile(null);
       loadData();
     } catch (err) {
-      alert('Erreur lors du renommage.');
+      alert(t('error.rename'));
     }
   };
 
@@ -202,14 +204,14 @@ function App() {
   };
 
   const handleDeleteFile = async (id: string) => {
-    if (window.confirm('Voulez-vous vraiment supprimer ce fichier ?')) {
+    if (window.confirm(t('explorer:confirmDelete'))) {
       try {
         await api.deleteFile(id);
         setIsPanelOpen(false);
         setSelectedFile(null);
         loadData();
       } catch (err) {
-        alert('Erreur lors de la suppression.');
+        alert(t('error.delete'));
       }
     }
   };
@@ -221,7 +223,7 @@ function App() {
       setSelectedFile(null);
       loadData();
     } catch (err) {
-      alert('Erreur lors du déplacement.');
+      alert(t('error.move'));
     }
   };
 
@@ -233,7 +235,7 @@ function App() {
       setAnalyzeProgress({ state: 'starting' });
     } catch (err) {
       setAnalyzeProgress(null);
-      alert('Erreur lors du lancement de l\'analyse.');
+      alert(t('error.analysis'));
     }
   };
 
@@ -254,7 +256,7 @@ function App() {
         } else if (status.state === 'failed' || status.state === 'cancelled') {
           batchNameRef.current = null;
           setAnalyzeProgress(null);
-          alert('L\'analyse batch a échoué.');
+          alert(t('error.batchFailed'));
         } else {
           const done = status.succeededCount ?? 0;
           const total = status.totalCount ?? 0;
@@ -270,7 +272,7 @@ function App() {
     }, 10000);
 
     return () => clearInterval(interval);
-  }, [analyzeProgress, loadData]);
+  }, [analyzeProgress, loadData, t]);
 
   return (
     <div className="app-container">
