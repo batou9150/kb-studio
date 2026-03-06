@@ -139,6 +139,7 @@ app.post('/api/files', upload.array('files'), async (req, res) => {
           description: '',
           value_date: extractValueDate(file.originalname),
           category: '',
+          folder: folderPath.replace(/\/+$/, ''),
         },
         content: {
           mimeType: file.mimetype,

@@ -49,6 +49,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ folders, currentFolder, onSele
             onDragLeave={() => setDragOverFolderId(null)}
             onDrop={(e) => {
               e.preventDefault();
+              e.stopPropagation();
               setDragOverFolderId(null);
               const fileId = e.dataTransfer.getData('application/kb-file-id');
               if (fileId) {
@@ -70,7 +71,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ folders, currentFolder, onSele
   };
 
   return (
-    <aside className="explorer-sidebar">
+    <aside
+      className="explorer-sidebar"
+      onDragOver={(e) => e.stopPropagation()}
+      onDragEnter={(e) => e.stopPropagation()}
+      onDragLeave={(e) => e.stopPropagation()}
+      onDrop={(e) => e.stopPropagation()}
+    >
       <div className="explorer-sidebar-header">
         Dossiers
         <button className="icon-btn" title="Nouveau Dossier" onClick={onCreateFolder}>
@@ -85,6 +92,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ folders, currentFolder, onSele
           onDragLeave={() => setDragOverFolderId(null)}
           onDrop={(e) => {
             e.preventDefault();
+            e.stopPropagation();
             setDragOverFolderId(null);
             const fileId = e.dataTransfer.getData('application/kb-file-id');
             if (fileId) {
