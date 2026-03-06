@@ -680,7 +680,7 @@ export const SearchPanel: React.FC = () => {
                         </td>
                         <td>
                           <button className="btn btn-outline" style={{ fontSize: '0.8rem', padding: '4px 10px' }} onClick={() => setSelectedDoc(doc)}>
-                            <Eye size={14} /> Voir le document
+                            <Eye size={14} /> Voir les métadonnées
                           </button>
                         </td>
                       </tr>

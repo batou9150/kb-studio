@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import type { FileItem } from '../types';
-import { FileText, Image, File as FileIcon, Trash2, Download, FolderPlus, ArrowUpFromLine, FileUp, FolderUp, Folder, Pencil, Check, X, Search, ChevronDown, Upload } from 'lucide-react';
+import { FileText, Image, File as FileIcon, Trash2, Download, FolderPlus, ArrowUpFromLine, FileUp, FolderUp, Folder, Pencil, Check, X, Search, ChevronDown, Upload, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface ExplorerProps {
@@ -131,10 +131,8 @@ export const Explorer: React.FC<ExplorerProps> = ({
               <tr>
                 <th>Dossier</th>
                 <th>Nom</th>
-                <th>Date de valeur</th>
-                <th>Description</th>
                 <th>Modifié le</th>
-                <th style={{ width: '80px', textAlign: 'right' }}>Actions</th>
+                <th style={{ width: '80px' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -194,15 +192,12 @@ export const Explorer: React.FC<ExplorerProps> = ({
                       )}
                     </div>
                   </td>
-                  <td>{file.metadata?.structData?.value_date || '-'}</td>
-                  <td>
-                    <div style={{ maxWidth: '300px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {file.metadata?.structData?.description || '-'}
-                    </div>
-                  </td>
                   <td>{format(new Date(file.updated), 'dd/MM/yyyy')}</td>
                   <td>
                     <div className="file-actions" onClick={(e) => e.stopPropagation()}>
+                      <button className="icon-btn" onClick={() => onSelectFile(file)} title="Voir les métadonnées">
+                        <Eye size={16} />
+                      </button>
                       <button className="icon-btn" onClick={() => onDownloadFile(file.id)} title="Télécharger">
                         <Download size={16} />
                       </button>
