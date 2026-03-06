@@ -74,7 +74,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
             selectedBucket={selectedBucket}
             onBucketChange={onBucketChange}
             projectId={projectId}
-            gcsConsoleTitle={t('viewInConsole')}
+            gcsConsoleTitle={tc('viewInConsole')}
           />
         </div>
         <div className="explorer-toolbar-center">
@@ -166,10 +166,10 @@ export const Explorer: React.FC<ExplorerProps> = ({
           <table className="file-table">
             <thead>
               <tr>
-                <th>{t('colFolder')}</th>
-                <th>{t('colName')}</th>
+                <th>{tc('colFolder')}</th>
+                <th>{tc('colName')}</th>
                 <th>{t('colModified')}</th>
-                <th style={{ width: '80px' }}>{t('colActions')}</th>
+                <th style={{ width: '80px' }}>{tc('colActions')}</th>
               </tr>
             </thead>
             <tbody>

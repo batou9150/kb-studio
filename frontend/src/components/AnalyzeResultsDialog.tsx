@@ -31,20 +31,20 @@ export const AnalyzeResultsDialog: React.FC<AnalyzeResultsDialogProps> = ({
 
         <div className="modal-body">
           <p>
-            <span style={{ color: 'var(--success-color)', fontWeight: 600 }}>{results.length} {t('analyzeResults.success')}</span>
+            <span style={{ color: 'var(--success-color)', fontWeight: 600 }}>{results.length} {tc('labelSuccess')}</span>
             {' / '}
-            <span style={{ color: 'var(--danger-color)', fontWeight: 600 }}>{failed.length} {t('analyzeResults.failures')}</span>
+            <span style={{ color: 'var(--danger-color)', fontWeight: 600 }}>{failed.length} {tc('labelFailures')}</span>
           </p>
 
           {results.length > 0 && (
             <details>
-              <summary>{t('analyzeResults.successDetails', { count: results.length })}</summary>
+              <summary>{tc('successDetails', { count: results.length })}</summary>
               <table className="analyze-results-table">
                 <thead>
                   <tr>
-                    <th>{t('analyzeResults.colDescription')}</th>
-                    <th>{t('analyzeResults.colDate')}</th>
-                    <th>{t('analyzeResults.colCategory')}</th>
+                    <th>{tc('colDescription')}</th>
+                    <th>{tc('colDate')}</th>
+                    <th>{tc('colCategory')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -62,12 +62,12 @@ export const AnalyzeResultsDialog: React.FC<AnalyzeResultsDialogProps> = ({
 
           {failed.length > 0 && (
             <details>
-              <summary>{t('analyzeResults.failureDetails', { count: failed.length })}</summary>
+              <summary>{tc('failureDetails', { count: failed.length })}</summary>
               <table className="analyze-results-table">
                 <thead>
                   <tr>
-                    <th>{t('analyzeResults.colId')}</th>
-                    <th>{t('analyzeResults.colError')}</th>
+                    <th>{tc('colId')}</th>
+                    <th>{tc('colError')}</th>
                   </tr>
                 </thead>
                 <tbody>

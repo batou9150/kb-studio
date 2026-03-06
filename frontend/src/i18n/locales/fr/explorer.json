@@ -3,7 +3,6 @@
   "newFolder": "Nouveau Dossier",
   "newFolderPrompt": "Nom du nouveau dossier:",
   "root": "Racine",
-  "viewInConsole": "Voir dans la Console",
   "searchPlaceholder": "Rechercher un fichier...",
   "analyzeAllTooltip": "Analyser tous les fichiers avec Gemini",
   "analyzeAll": "Analyser tout",
@@ -16,10 +15,7 @@
   "dropFiles": "Déposez les fichiers ici pour les téléverser",
   "emptyFolder": "Ce dossier est vide",
   "emptyFolderHint": "Glissez-déposez des fichiers ici ou utilisez le bouton Importer.",
-  "colFolder": "Dossier",
-  "colName": "Nom",
   "colModified": "Modifié le",
-  "colActions": "Actions",
   "confirmDelete": "Voulez-vous vraiment supprimer ce fichier ?",
   "nav": {
     "knowledgeBase": "Knowledge Base",

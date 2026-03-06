@@ -128,7 +128,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ folders, onDataChanged, 
               selectedBucket={selectedBucket}
               onBucketChange={onBucketChange}
               projectId={projectId}
-              gcsConsoleTitle={t('viewInConsole')}
+              gcsConsoleTitle={tc('viewInConsole')}
             />
           </h2>
           <button className="btn btn-primary" onClick={handleCreateFolder} disabled={loading}>
@@ -139,8 +139,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ folders, onDataChanged, 
         <table className="file-table">
           <thead>
             <tr>
-              <th>{t('colFolder')}</th>
-              <th style={{ width: 120 }}>{t('colActions')}</th>
+              <th>{tc('colFolder')}</th>
+              <th style={{ width: 120 }}>{tc('colActions')}</th>
             </tr>
           </thead>
           <tbody>
@@ -178,10 +178,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ folders, onDataChanged, 
         <table className="file-table">
           <thead>
             <tr>
-              <th>{t('colName')}</th>
+              <th>{tc('colName')}</th>
               <th>{t('colState')}</th>
-              <th>{t('colDate')}</th>
-              <th style={{ width: 140 }}>{t('colActions')}</th>
+              <th>{tc('colDate')}</th>
+              <th style={{ width: 140 }}>{tc('colActions')}</th>
             </tr>
           </thead>
           <tbody>
@@ -210,20 +210,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ folders, onDataChanged, 
                     <tr className="history-detail-row">
                       <td colSpan={4}>
                         <p style={{ marginBottom: 8 }}>
-                          <span style={{ color: 'var(--success-color)', fontWeight: 600 }}>{expandedBatch.data.results.length} {t('success')}</span>
+                          <span style={{ color: 'var(--success-color)', fontWeight: 600 }}>{expandedBatch.data.results.length} {tc('labelSuccess')}</span>
                           {' / '}
-                          <span style={{ color: 'var(--danger-color)', fontWeight: 600 }}>{expandedBatch.data.failed.length} {t('failures')}</span>
+                          <span style={{ color: 'var(--danger-color)', fontWeight: 600 }}>{expandedBatch.data.failed.length} {tc('labelFailures')}</span>
                         </p>
 
                         {expandedBatch.data.results.length > 0 && (
                           <details>
-                            <summary style={{ fontWeight: 600, cursor: 'pointer', marginBottom: 8 }}>{t('successDetails', { count: expandedBatch.data.results.length })}</summary>
+                            <summary style={{ fontWeight: 600, cursor: 'pointer', marginBottom: 8 }}>{tc('successDetails', { count: expandedBatch.data.results.length })}</summary>
                             <table className="analyze-results-table">
                               <thead>
                                 <tr>
-                                  <th>{t('colDescription')}</th>
-                                  <th>{t('colDate')}</th>
-                                  <th>{t('colCategory')}</th>
+                                  <th>{tc('colDescription')}</th>
+                                  <th>{tc('colDate')}</th>
+                                  <th>{tc('colCategory')}</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -241,12 +241,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ folders, onDataChanged, 
 
                         {expandedBatch.data.failed.length > 0 && (
                           <details>
-                            <summary style={{ fontWeight: 600, cursor: 'pointer', marginBottom: 8 }}>{t('failureDetails', { count: expandedBatch.data.failed.length })}</summary>
+                            <summary style={{ fontWeight: 600, cursor: 'pointer', marginBottom: 8 }}>{tc('failureDetails', { count: expandedBatch.data.failed.length })}</summary>
                             <table className="analyze-results-table">
                               <thead>
                                 <tr>
-                                  <th>{t('colId')}</th>
-                                  <th>{t('colError')}</th>
+                                  <th>{tc('colId')}</th>
+                                  <th>{tc('colError')}</th>
                                 </tr>
                               </thead>
                               <tbody>

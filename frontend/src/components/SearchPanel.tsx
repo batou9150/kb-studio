@@ -322,7 +322,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ bucketNames, selectedB
               selectedBucket={selectedBucket}
               onBucketChange={onBucketChange}
               projectId={projectId}
-              gcsConsoleTitle={t('viewInConsole')}
+              gcsConsoleTitle={tc('viewInConsole')}
             />
           </h2>
         </div>
@@ -557,9 +557,9 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ bucketNames, selectedB
               {importProgress && importProgress.totalCount > 0 && (
                 <div style={{ display: 'flex', gap: 16, color: 'var(--text-secondary)' }}>
                   <span>{t('processed')} {importProgress.successCount + importProgress.failureCount}/{importProgress.totalCount}</span>
-                  <span style={{ color: 'var(--success-color)' }}>{t('success')} {importProgress.successCount}</span>
+                  <span style={{ color: 'var(--success-color)' }}>{tc('labelSuccess')} {importProgress.successCount}</span>
                   {importProgress.failureCount > 0 && (
-                    <span style={{ color: 'var(--danger-color)' }}>{t('failures')} {importProgress.failureCount}</span>
+                    <span style={{ color: 'var(--danger-color)' }}>{tc('labelFailures')} {importProgress.failureCount}</span>
                   )}
                 </div>
               )}
@@ -581,10 +581,10 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ bucketNames, selectedB
                   <table className="file-table" style={{ fontSize: '0.85rem' }}>
                     <thead>
                       <tr>
-                        <th>{t('date')}</th>
+                        <th>{tc('colDate')}</th>
                         <th>{t('status')}</th>
-                        <th>{t('success')}</th>
-                        <th>{t('failures')}</th>
+                        <th>{tc('labelSuccess')}</th>
+                        <th>{tc('labelFailures')}</th>
                         <th>{t('total')}</th>
                       </tr>
                     </thead>
@@ -638,10 +638,10 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ bucketNames, selectedB
               <table className="file-table">
                 <thead>
                   <tr>
-                    <th>{t('colId')}</th>
+                    <th>{tc('colId')}</th>
                     <th>{t('colUri')}</th>
                     <th>{t('colIndexStatus')}</th>
-                    <th>{t('colActions')}</th>
+                    <th>{tc('colActions')}</th>
                   </tr>
                 </thead>
                 <tbody>

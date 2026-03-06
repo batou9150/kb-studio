@@ -3,7 +3,6 @@
   "newFolder": "New Folder",
   "newFolderPrompt": "New folder name:",
   "root": "Root",
-  "viewInConsole": "View in Console",
   "searchPlaceholder": "Search files...",
   "analyzeAllTooltip": "Analyze all files with Gemini",
   "analyzeAll": "Analyze all",
@@ -16,10 +15,7 @@
   "dropFiles": "Drop files here to upload",
   "emptyFolder": "This folder is empty",
   "emptyFolderHint": "Drag and drop files here or use the Import button.",
-  "colFolder": "Folder",
-  "colName": "Name",
   "colModified": "Modified",
-  "colActions": "Actions",
   "confirmDelete": "Are you sure you want to delete this file?",
   "nav": {
     "knowledgeBase": "Knowledge Base",

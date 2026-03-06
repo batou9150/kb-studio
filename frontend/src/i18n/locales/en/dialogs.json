@@ -8,15 +8,6 @@
     "overwrite": "Replace"
   },
   "analyzeResults": {
-    "title": "Analysis Results",
-    "success": "Success",
-    "failures": "Failures",
-    "successDetails": "Success details ({{count}})",
-    "failureDetails": "Failure details ({{count}})",
-    "colDescription": "Description",
-    "colDate": "Date",
-    "colCategory": "Category",
-    "colId": "ID",
-    "colError": "Error"
+    "title": "Analysis Results"
   }
 }
