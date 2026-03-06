@@ -51,6 +51,8 @@ app.get('/api/config', (_req, res) => {
   res.json({
     bucketName: requireBucketName,
     projectId: process.env.GOOGLE_CLOUD_PROJECT || '',
+    appName: process.env.APP_NAME || 'KB-Studio',
+    appLogo: process.env.APP_LOGO || '',
   });
 });
 

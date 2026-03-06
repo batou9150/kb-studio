@@ -22,6 +22,8 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [bucketName, setBucketName] = useState('');
   const [projectId, setProjectId] = useState('');
+  const [appName, setAppName] = useState('KB-Studio');
+  const [appLogo, setAppLogo] = useState('');
 
   const [currentView, setCurrentView] = useState<'explorer' | 'admin' | 'index' | 'answer'>('explorer');
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
@@ -66,10 +68,14 @@ function App() {
   }, [currentFolder, searchQuery, t]);
 
   useEffect(() => {
-    document.title = import.meta.env.VITE_APP_NAME || 'KB-Studio';
-    api.getConfig().then(({ bucketName, projectId }) => {
+    api.getConfig().then(({ bucketName, projectId, appName, appLogo }) => {
       setBucketName(bucketName);
       setProjectId(projectId);
+      if (appName) {
+        setAppName(appName);
+        document.title = appName;
+      }
+      if (appLogo) setAppLogo(appLogo);
     });
   }, []);
 
@@ -296,6 +302,8 @@ function App() {
         currentView={currentView}
         onNavigate={handleSelectFolder}
         onViewChange={setCurrentView}
+        appName={appName}
+        appLogo={appLogo}
       />
 
       {currentView === 'admin' ? (
