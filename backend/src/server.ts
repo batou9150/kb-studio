@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
 import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 import {
@@ -522,6 +523,14 @@ app.post('/api/search/datastores/:id/answer', async (req, res) => {
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// Serve frontend static files (production: built frontend copied to ../public)
+app.use(express.static(path.join(__dirname, '../public')));
+
+// SPA fallback: serve index.html for all non-API routes
+app.get('*splat', (_req, res) => {
+  res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
 const PORT = process.env.PORT || 8080;
