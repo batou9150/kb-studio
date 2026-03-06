@@ -2,12 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../api';
 import type { DataStoreStatus, DataStoreDocument, ImportOperationStatus, ImportHistoryEntry } from '../types';
-import { Loader, AlertTriangle, CheckCircle, XCircle, RefreshCw, BrushCleaning, Trash2, Upload, Plus, ChevronDown, ChevronRight, Clock, Eye, X } from 'lucide-react';
+import { Loader, AlertTriangle, CheckCircle, XCircle, RefreshCw, BrushCleaning, Trash2, Upload, Plus, ChevronDown, ChevronRight, Clock, Eye } from 'lucide-react';
 import { BucketSelector } from './BucketSelector';
 import { DataStoreSelector } from './DataStoreSelector';
-import type { DataStoreOption } from './DataStoreSelector';
-
-const STORAGE_KEY = 'kb-studio-search-selected';
+import { StatusBadge } from './StatusBadge';
+import { Modal } from './Modal';
+import { useDataStores } from '../hooks/useDataStores';
 
 interface SearchPanelProps {
   bucketNames: string[];
@@ -19,13 +19,7 @@ interface SearchPanelProps {
 export const SearchPanel: React.FC<SearchPanelProps> = ({ bucketNames, selectedBucket, onBucketChange, projectId }) => {
   const { t } = useTranslation('search');
   const tc = useTranslation('common').t;
-  // Datastore list
-  const [dataStores, setDataStores] = useState<DataStoreOption[]>([]);
-  const [dataStoresLoading, setDataStoresLoading] = useState(true);
-
-  // Selected datastore
-  const [dataStoreId, setDataStoreId] = useState('');
-  const [location, setLocation] = useState('global');
+  const ds = useDataStores('kb-studio-search-selected');
 
   // Create form
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -63,84 +57,46 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ bucketNames, selectedB
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchDataStores = useCallback(async () => {
-    setDataStoresLoading(true);
-    try {
-      const list = await api.listDataStores();
-      setDataStores(list);
-      return list;
-    } catch {
-      setDataStores([]);
-      return [];
-    } finally {
-      setDataStoresLoading(false);
-    }
-  }, []);
-
-  // Load datastore list + restore last selection
-  useEffect(() => {
-    fetchDataStores().then(list => {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved && list.length > 0) {
-        try {
-          const { dataStoreId: savedId, location: savedLoc } = JSON.parse(saved);
-          if (list.some(ds => ds.dataStoreId === savedId && ds.location === savedLoc)) {
-            setDataStoreId(savedId);
-            setLocation(savedLoc);
-            return;
-          }
-        } catch {}
-      }
-    });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Persist selection
-  useEffect(() => {
-    if (dataStoreId) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ dataStoreId, location }));
-    }
-  }, [dataStoreId, location]);
-
   const fetchStatus = useCallback(async () => {
-    if (!dataStoreId) return;
+    if (!ds.dataStoreId) return;
     setLoading(true);
     setError(null);
     try {
-      const s = await api.getDataStoreStatus(dataStoreId, location);
+      const s = await api.getDataStoreStatus(ds.dataStoreId, ds.location);
       setStatus(s);
     } catch (err: any) {
       setError(err.response?.data?.error || err.message);
     } finally {
       setLoading(false);
     }
-  }, [dataStoreId, location]);
+  }, [ds.dataStoreId, ds.location]);
 
   const fetchDocuments = useCallback(async (append = false) => {
-    if (!dataStoreId) return;
+    if (!ds.dataStoreId) return;
     try {
       const token = append ? nextPageToken : undefined;
-      const res = await api.listDataStoreDocuments(dataStoreId, location, 20, token ?? undefined);
+      const res = await api.listDataStoreDocuments(ds.dataStoreId, ds.location, 20, token ?? undefined);
       setDocuments(prev => append ? [...prev, ...res.documents] : res.documents);
       setNextPageToken(res.nextPageToken);
     } catch {}
-  }, [dataStoreId, location, nextPageToken]);
+  }, [ds.dataStoreId, ds.location, nextPageToken]);
 
   const fetchImportHistory = useCallback(async () => {
-    if (!dataStoreId) return;
+    if (!ds.dataStoreId) return;
     try {
-      const history = await api.listImportOperations(dataStoreId, location);
+      const history = await api.listImportOperations(ds.dataStoreId, ds.location);
       setImportHistory(history);
 
       // If the most recent import is still running, start polling it
       const latest = history[0];
       if (latest && !latest.done && !importOperation) {
-        setImportOperation({ name: latest.name, location });
+        setImportOperation({ name: latest.name, location: ds.location });
         setActionLoading('import-poll');
       }
     } catch {
       setImportHistory([]);
     }
-  }, [dataStoreId, location, importOperation]);
+  }, [ds.dataStoreId, ds.location, importOperation]);
 
   // Poll import operation progress
   useEffect(() => {
@@ -172,7 +128,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ bucketNames, selectedB
 
   // Auto-fetch when selection or bucket changes
   useEffect(() => {
-    if (dataStoreId) {
+    if (ds.dataStoreId) {
       setStatus(null);
       setDocuments([]);
       setNextPageToken(null);
@@ -181,7 +137,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ bucketNames, selectedB
       fetchDocuments();
       fetchImportHistory();
     }
-  }, [dataStoreId, location, selectedBucket]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [ds.dataStoreId, ds.location, selectedBucket]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSelectChange = (value: string) => {
     if (value === '__new__') {
@@ -189,11 +145,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ bucketNames, selectedB
       return;
     }
     setShowCreateForm(false);
-    const ds = dataStores.find(d => `${d.location}/${d.dataStoreId}` === value);
-    if (ds) {
-      setDataStoreId(ds.dataStoreId);
-      setLocation(ds.location);
-    }
+    ds.selectDataStore(value);
   };
 
   const handleCreate = async () => {
@@ -230,9 +182,9 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ bucketNames, selectedB
       }
       const appConfigParam = createApp ? { searchTier: appSearchTier, enableLlm: appEnableLlm } : undefined;
       await api.createDataStore(newId, newDisplayName, newLocation, documentProcessingConfig, appConfigParam);
-      await fetchDataStores();
-      setDataStoreId(newId);
-      setLocation(newLocation);
+      await ds.fetchDataStores();
+      ds.setDataStoreId(newId);
+      ds.setLocation(newLocation);
       setShowCreateForm(false);
       setNewId('');
       setNewDisplayName('');
@@ -259,8 +211,8 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ bucketNames, selectedB
     setError(null);
     setImportProgress(null);
     try {
-      const { operationName } = await api.importDocuments(dataStoreId, location, mode);
-      setImportOperation({ name: operationName, location });
+      const { operationName } = await api.importDocuments(ds.dataStoreId, ds.location, mode);
+      setImportOperation({ name: operationName, location: ds.location });
       setStatus(prev => prev ? { ...prev, lastImportDone: false } : prev);
     } catch (err: any) {
       setError(err.response?.data?.error || err.message);
@@ -274,7 +226,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ bucketNames, selectedB
     setActionLoading('purge');
     setError(null);
     try {
-      await api.purgeDocuments(dataStoreId, location);
+      await api.purgeDocuments(ds.dataStoreId, ds.location);
       await fetchStatus();
       setDocuments([]);
       setNextPageToken(null);
@@ -286,20 +238,18 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ bucketNames, selectedB
   };
 
   const handleDeleteDataStore = async () => {
-    if (!window.confirm(t('confirmDeleteDatastore', { id: dataStoreId }))) return;
+    if (!window.confirm(t('confirmDeleteDatastore', { id: ds.dataStoreId }))) return;
     if (!window.confirm(t('confirmDeleteIrreversible'))) return;
     setActionLoading('delete');
     setError(null);
     try {
-      await api.deleteDataStore(dataStoreId, location);
-      setDataStoreId('');
-      setLocation('global');
+      await api.deleteDataStore(ds.dataStoreId, ds.location);
+      ds.clearSelection();
       setStatus(null);
       setDocuments([]);
       setNextPageToken(null);
       setImportHistory([]);
-      localStorage.removeItem(STORAGE_KEY);
-      await fetchDataStores();
+      await ds.fetchDataStores();
     } catch (err: any) {
       setError(err.response?.data?.error || err.message);
     } finally {
@@ -308,7 +258,6 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ bucketNames, selectedB
   };
 
   const isActionLoading = actionLoading !== null;
-  const selectedKey = dataStoreId ? `${location}/${dataStoreId}` : '';
 
   return (
     <div className="vais-panel">
@@ -328,9 +277,9 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ bucketNames, selectedB
         </div>
 
         <DataStoreSelector
-          dataStores={dataStores}
-          loading={dataStoresLoading}
-          selectedKey={showCreateForm ? '__new__' : selectedKey}
+          dataStores={ds.dataStores}
+          loading={ds.loading}
+          selectedKey={showCreateForm ? '__new__' : ds.selectedKey}
           onChange={handleSelectChange}
           showCreateOption
           consoleUrl={!showCreateForm ? status?.consoleUrl : null}
@@ -479,14 +428,10 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ bucketNames, selectedB
         )}
       </div>
 
-      {error && (
-        <div style={{ padding: '12px 16px', background: '#fef2f2', border: '1px solid var(--danger-color)', borderRadius: 6, marginBottom: 24, color: 'var(--danger-color)', fontSize: '0.9rem', maxWidth: 1000, marginLeft: 'auto', marginRight: 'auto' }}>
-          {error}
-        </div>
-      )}
+      {error && <div className="error-banner">{error}</div>}
 
       {/* Status */}
-      {dataStoreId && (
+      {ds.dataStoreId && (
         <div className="vais-section">
           <div className="vais-section-header">
             <h2>{t('status')}</h2>
@@ -508,21 +453,13 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ bucketNames, selectedB
                   <td style={{ fontWeight: 600 }}>{t('sync')}</td>
                   <td>
                     {!status.lastImportDone ? (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--primary-color)', fontWeight: 500 }}>
-                        <Loader size={16} className="spinner" /> {t('syncImporting')}
-                      </span>
+                      <StatusBadge variant="primary" icon={<Loader size={16} className="spinner" />} bold>{t('syncImporting')}</StatusBadge>
                     ) : status.lastImportFailureCount > 0 ? (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--danger-color)', fontWeight: 500 }}>
-                        <XCircle size={16} /> {t('syncError', { count: status.lastImportFailureCount })}
-                      </span>
+                      <StatusBadge variant="danger" icon={<XCircle size={16} />} bold>{t('syncError', { count: status.lastImportFailureCount })}</StatusBadge>
                     ) : status.isUpToDate ? (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--success-color)', fontWeight: 500 }}>
-                        <CheckCircle size={16} /> {t('syncUpToDate')}
-                      </span>
+                      <StatusBadge variant="success" icon={<CheckCircle size={16} />} bold>{t('syncUpToDate')}</StatusBadge>
                     ) : (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--warning-color)', fontWeight: 500 }}>
-                        <AlertTriangle size={16} /> {t('syncNeedsReimport')}
-                      </span>
+                      <StatusBadge variant="warning" icon={<AlertTriangle size={16} />} bold>{t('syncNeedsReimport')}</StatusBadge>
                     )}
                   </td>
                 </tr>
@@ -594,17 +531,11 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ bucketNames, selectedB
                           <td style={{ whiteSpace: 'nowrap' }}>{op.createTime ? new Date(op.createTime).toLocaleString() : '—'}</td>
                           <td>
                             {!op.done ? (
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--primary-color)' }}>
-                                <Loader size={12} className="spinner" /> {t('inProgress')}
-                              </span>
+                              <StatusBadge variant="primary" icon={<Loader size={12} className="spinner" />}>{t('inProgress')}</StatusBadge>
                             ) : op.error ? (
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--danger-color)' }}>
-                                <XCircle size={12} /> {t('error')}
-                              </span>
+                              <StatusBadge variant="danger" icon={<XCircle size={12} />}>{t('error')}</StatusBadge>
                             ) : (
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--success-color)' }}>
-                                <CheckCircle size={12} /> {t('done')}
-                              </span>
+                              <StatusBadge variant="success" icon={<CheckCircle size={12} />}>{t('done')}</StatusBadge>
                             )}
                           </td>
                           <td>{op.successCount}</td>
@@ -659,17 +590,11 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ bucketNames, selectedB
                         </td>
                         <td>
                           {doc.indexState === 'indexed' ? (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--success-color)' }}>
-                              <CheckCircle size={14} /> {t('indexed')}
-                            </span>
+                            <StatusBadge variant="success" icon={<CheckCircle size={14} />}>{t('indexed')}</StatusBadge>
                           ) : doc.indexState === 'error' ? (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--danger-color)' }}>
-                              <XCircle size={14} /> {t('error')}
-                            </span>
+                            <StatusBadge variant="danger" icon={<XCircle size={14} />}>{t('error')}</StatusBadge>
                           ) : (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--warning-color)' }} title={doc.indexPendingMessage || undefined}>
-                              <Loader size={14} className="spinner" /> {t('pending')}
-                            </span>
+                            <StatusBadge variant="warning" icon={<Loader size={14} className="spinner" />} title={doc.indexPendingMessage || undefined}>{t('pending')}</StatusBadge>
                           )}
                         </td>
                         <td>
@@ -717,17 +642,11 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ bucketNames, selectedB
 
       {/* Document detail modal */}
       {selectedDoc && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setSelectedDoc(null)}>
-          <div style={{ background: 'var(--bg-color, #fff)', borderRadius: 8, padding: 24, maxWidth: 600, width: '90%', maxHeight: '80vh', overflow: 'auto', position: 'relative' }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ margin: 0, fontSize: '1rem' }}>{t('document')} {selectedDoc.id}</h3>
-              <button className="icon-btn" onClick={() => setSelectedDoc(null)}><X size={18} /></button>
-            </div>
-            <pre style={{ background: 'var(--bg-secondary, #f8f9fa)', padding: 16, borderRadius: 6, overflow: 'auto', fontSize: '0.85rem', margin: 0 }}>
-              {JSON.stringify(selectedDoc.structData, null, 2)}
-            </pre>
-          </div>
-        </div>
+        <Modal onClose={() => setSelectedDoc(null)} title={`${t('document')} ${selectedDoc.id}`} width={600}>
+          <pre style={{ background: 'var(--bg-secondary, #f8f9fa)', padding: 16, borderRadius: 6, overflow: 'auto', fontSize: '0.85rem', margin: 0 }}>
+            {JSON.stringify(selectedDoc.structData, null, 2)}
+          </pre>
+        </Modal>
       )}
     </div>
   );

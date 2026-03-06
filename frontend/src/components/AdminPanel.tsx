@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { api } from '../api';
 import { FolderPlus, Pencil, Trash2, AlertTriangle, Loader, History, Eye } from 'lucide-react';
 import { BucketSelector } from './BucketSelector';
+import { AnalyzeResultsTable } from './AnalyzeResultsTable';
 
 interface BatchInfo {
   name: string;
@@ -209,57 +210,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ folders, onDataChanged, 
                   {expandedBatch?.name === batch.name && (
                     <tr className="history-detail-row">
                       <td colSpan={4}>
-                        <p style={{ marginBottom: 8 }}>
-                          <span style={{ color: 'var(--success-color)', fontWeight: 600 }}>{expandedBatch.data.results.length} {tc('labelSuccess')}</span>
-                          {' / '}
-                          <span style={{ color: 'var(--danger-color)', fontWeight: 600 }}>{expandedBatch.data.failed.length} {tc('labelFailures')}</span>
-                        </p>
-
-                        {expandedBatch.data.results.length > 0 && (
-                          <details>
-                            <summary style={{ fontWeight: 600, cursor: 'pointer', marginBottom: 8 }}>{tc('successDetails', { count: expandedBatch.data.results.length })}</summary>
-                            <table className="analyze-results-table">
-                              <thead>
-                                <tr>
-                                  <th>{tc('colDescription')}</th>
-                                  <th>{tc('colDate')}</th>
-                                  <th>{tc('colCategory')}</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {expandedBatch.data.results.map((r) => (
-                                  <tr key={r.id}>
-                                    <td>{r.description}</td>
-                                    <td>{r.value_date}</td>
-                                    <td>{r.category}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </details>
-                        )}
-
-                        {expandedBatch.data.failed.length > 0 && (
-                          <details>
-                            <summary style={{ fontWeight: 600, cursor: 'pointer', marginBottom: 8 }}>{tc('failureDetails', { count: expandedBatch.data.failed.length })}</summary>
-                            <table className="analyze-results-table">
-                              <thead>
-                                <tr>
-                                  <th>{tc('colId')}</th>
-                                  <th>{tc('colError')}</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {expandedBatch.data.failed.map((f) => (
-                                  <tr key={f.id}>
-                                    <td title={f.id}>{f.id.length > 12 ? f.id.slice(0, 12) + '…' : f.id}</td>
-                                    <td>{f.error}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </details>
-                        )}
+                        <AnalyzeResultsTable results={expandedBatch.data.results} failed={expandedBatch.data.failed} />
                       </td>
                     </tr>
                   )}
