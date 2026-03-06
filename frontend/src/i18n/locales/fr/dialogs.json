@@ -8,15 +8,6 @@
     "overwrite": "Remplacer"
   },
   "analyzeResults": {
-    "title": "Résultats de l'analyse",
-    "success": "Succès",
-    "failures": "Échecs",
-    "successDetails": "Détails des succès ({{count}})",
-    "failureDetails": "Détails des échecs ({{count}})",
-    "colDescription": "Description",
-    "colDate": "Date",
-    "colCategory": "Catégorie",
-    "colId": "ID",
-    "colError": "Erreur"
+    "title": "Résultats de l'analyse"
   }
 }

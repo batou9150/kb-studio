@@ -1,9 +1,6 @@
 {
-  "datastore": "Datastore",
   "datastoreFor": "Datastore pour",
-  "selectDatastore": "Sélectionner un datastore...",
   "createNew": "+ Créer un nouveau datastore",
-  "viewInConsole": "Voir dans la Console",
   "datastoreName": "Nom du Datastore",
   "datastoreNamePlaceholder": "Ma Base de Connaissances",
   "datastoreId": "ID du Datastore",
@@ -43,15 +40,11 @@
   "inProgress": "En cours",
   "error": "Erreur",
   "done": "Terminé",
-  "success": "Succès",
-  "failures": "Échecs",
   "total": "Total",
   "noImport": "Aucun import précédent.",
   "documents": "Documents",
-  "colId": "ID",
   "colUri": "URI",
   "colIndexStatus": "Statut indexation",
-  "colActions": "Actions",
   "indexed": "Indexé",
   "pending": "En attente",
   "loadMore": "Charger plus",
@@ -66,6 +59,5 @@
   "confirmDeleteIrreversible": "Cette action est irréversible. Confirmer la suppression ?",
   "deleting": "Suppression en cours...",
   "deleteDatastore": "Supprimer le datastore",
-  "document": "Document",
-  "date": "Date"
+  "document": "Document"
 }

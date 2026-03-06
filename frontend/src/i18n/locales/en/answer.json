@@ -1,7 +1,5 @@
 {
   "search": "Search",
-  "datastore": "Datastore",
-  "selectDatastore": "Select a datastore...",
   "prompt": "Prompt",
   "promptPlaceholder": "Ask your question...",
   "send": "Send",

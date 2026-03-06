@@ -27,7 +27,7 @@ export const DataStoreSelector: React.FC<DataStoreSelectorProps> = ({
   return (
     <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
       <div className="form-group" style={{ flex: 1, minWidth: 250, marginBottom: 0 }}>
-        <label>{t('datastore')}</label>
+        <label>{tc('datastore')}</label>
         {loading ? (
           <div className="form-control" style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-secondary)' }}>
             <Loader size={14} className="spinner" /> {tc('loading')}
@@ -38,7 +38,7 @@ export const DataStoreSelector: React.FC<DataStoreSelectorProps> = ({
             value={selectedKey}
             onChange={e => onChange(e.target.value)}
           >
-            <option value="" disabled>{t('selectDatastore')}</option>
+            <option value="" disabled>{tc('selectDatastore')}</option>
             {dataStores.map(ds => (
               <option key={`${ds.location}/${ds.dataStoreId}`} value={`${ds.location}/${ds.dataStoreId}`}>
                 {ds.displayName} ({ds.location}) — {ds.dataStoreId}
@@ -56,7 +56,7 @@ export const DataStoreSelector: React.FC<DataStoreSelectorProps> = ({
           href={consoleUrl}
           target="_blank"
           rel="noopener noreferrer"
-          title={t('viewInConsole')}
+          title={tc('viewInConsole')}
           style={{ marginBottom: 4 }}
         >
           <ExternalLink size={18} />
