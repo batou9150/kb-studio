@@ -12,8 +12,12 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, onViewC
     <header className="header">
       <div className="header-left">
         <div className="logo" style={{ cursor: 'pointer' }} onClick={() => { onNavigate(''); onViewChange('explorer'); }}>
-          <Database size={24} />
-          KB-Studio
+          {import.meta.env.VITE_APP_LOGO ? (
+            <img src={import.meta.env.VITE_APP_LOGO} alt="" style={{ height: 24 }} />
+          ) : (
+            <Database size={24} />
+          )}
+          {import.meta.env.VITE_APP_NAME || 'KB-Studio'}
         </div>
       </div>
 
