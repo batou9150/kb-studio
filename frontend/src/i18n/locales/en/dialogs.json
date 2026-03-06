@@ -1,0 +1,22 @@
+{
+  "duplicate": {
+    "title": "Existing files",
+    "message_one": "The following file already exists in this folder:",
+    "message_other": "The following files already exist in this folder:",
+    "confirm_one": "Do you want to replace this file?",
+    "confirm_other": "Do you want to replace these files?",
+    "overwrite": "Replace"
+  },
+  "analyzeResults": {
+    "title": "Analysis Results",
+    "success": "Success",
+    "failures": "Failures",
+    "successDetails": "Success details ({{count}})",
+    "failureDetails": "Failure details ({{count}})",
+    "colDescription": "Description",
+    "colDate": "Date",
+    "colCategory": "Category",
+    "colId": "ID",
+    "colError": "Error"
+  }
+}

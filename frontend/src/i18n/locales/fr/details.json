@@ -1,0 +1,29 @@
+{
+  "metadata": "Métadonnées",
+  "analyzeWithGemini": "Analyser avec Gemini",
+  "analyze": "Analyser",
+  "analyzeError": "Erreur lors de l'analyse : {{error}}",
+  "valueDate": "Date de valeur",
+  "category": "Catégorie",
+  "description": "Description",
+  "saveChanges": "Enregistrer les modifications",
+  "categories": {
+    "none": "— Non défini —",
+    "faq": "FAQ / Questions fréquentes",
+    "how_to": "Guide pratique / How-to",
+    "manual": "Manuel / Documentation technique",
+    "troubleshooting": "Dépannage / Troubleshooting",
+    "meeting_minutes": "Compte-rendu de réunion",
+    "policy": "Politique / Règlement",
+    "sop": "Procédure opérationnelle (SOP)",
+    "form": "Formulaire",
+    "report": "Rapport",
+    "release_notes": "Notes de version",
+    "presentation": "Présentation",
+    "memo": "Note de service / Mémo",
+    "contract": "Contrat / Accord",
+    "whitepaper": "Livre blanc",
+    "marketing_asset": "Support marketing",
+    "other": "Autre"
+  }
+}

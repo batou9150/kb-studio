@@ -1,0 +1,11 @@
+{
+  "search": "Search",
+  "datastore": "Datastore",
+  "selectDatastore": "Select a datastore...",
+  "prompt": "Prompt",
+  "promptPlaceholder": "Ask your question...",
+  "send": "Send",
+  "searching": "Searching...",
+  "sources": "Sources",
+  "noResults": "No results found."
+}

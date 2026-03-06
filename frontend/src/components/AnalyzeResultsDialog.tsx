@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Sparkles, X } from 'lucide-react';
 
 interface AnalyzeResultsDialogProps {
@@ -12,13 +13,16 @@ export const AnalyzeResultsDialog: React.FC<AnalyzeResultsDialogProps> = ({
   failed,
   onClose,
 }) => {
+  const { t } = useTranslation('dialogs');
+  const tc = useTranslation('common').t;
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-dialog" style={{ width: 600 }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div className="modal-title">
             <Sparkles size={20} color="var(--primary-color)" />
-            <span>Résultats de l'analyse</span>
+            <span>{t('analyzeResults.title')}</span>
           </div>
           <button className="icon-btn" onClick={onClose}>
             <X size={18} />
@@ -27,20 +31,20 @@ export const AnalyzeResultsDialog: React.FC<AnalyzeResultsDialogProps> = ({
 
         <div className="modal-body">
           <p>
-            <span style={{ color: 'var(--success-color)', fontWeight: 600 }}>{results.length} Succès</span>
+            <span style={{ color: 'var(--success-color)', fontWeight: 600 }}>{results.length} {t('analyzeResults.success')}</span>
             {' / '}
-            <span style={{ color: 'var(--danger-color)', fontWeight: 600 }}>{failed.length} Échecs</span>
+            <span style={{ color: 'var(--danger-color)', fontWeight: 600 }}>{failed.length} {t('analyzeResults.failures')}</span>
           </p>
 
           {results.length > 0 && (
             <details>
-              <summary>Détails des succès ({results.length})</summary>
+              <summary>{t('analyzeResults.successDetails', { count: results.length })}</summary>
               <table className="analyze-results-table">
                 <thead>
                   <tr>
-                    <th>Description</th>
-                    <th>Date</th>
-                    <th>Catégorie</th>
+                    <th>{t('analyzeResults.colDescription')}</th>
+                    <th>{t('analyzeResults.colDate')}</th>
+                    <th>{t('analyzeResults.colCategory')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -58,12 +62,12 @@ export const AnalyzeResultsDialog: React.FC<AnalyzeResultsDialogProps> = ({
 
           {failed.length > 0 && (
             <details>
-              <summary>Détails des échecs ({failed.length})</summary>
+              <summary>{t('analyzeResults.failureDetails', { count: failed.length })}</summary>
               <table className="analyze-results-table">
                 <thead>
                   <tr>
-                    <th>ID</th>
-                    <th>Erreur</th>
+                    <th>{t('analyzeResults.colId')}</th>
+                    <th>{t('analyzeResults.colError')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -81,7 +85,7 @@ export const AnalyzeResultsDialog: React.FC<AnalyzeResultsDialogProps> = ({
 
         <div className="modal-footer">
           <button className="btn btn-primary" onClick={onClose}>
-            Fermer
+            {tc('close')}
           </button>
         </div>
       </div>

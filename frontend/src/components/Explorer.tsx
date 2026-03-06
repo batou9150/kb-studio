@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDropzone } from 'react-dropzone';
 import type { FileItem } from '../types';
 import { FileText, Image, File as FileIcon, Trash2, Download, FolderPlus, ArrowUpFromLine, FileUp, FolderUp, Folder, Pencil, Check, X, Search, ChevronDown, Upload, Eye, Sparkles, Loader, ExternalLink } from 'lucide-react';
@@ -24,6 +25,8 @@ interface ExplorerProps {
 export const Explorer: React.FC<ExplorerProps> = ({
   files, selectedFile, onSelectFile, onUpload, onDeleteFile, onDownloadFile, onRenameFile, onSearch, onAnalyzeAll, analyzeProgress, bucketName, projectId, sidebar, detailsPanel
 }) => {
+  const { t } = useTranslation('explorer');
+  const tc = useTranslation('common').t;
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
   const [internalDrag, setInternalDrag] = useState(false);
@@ -72,7 +75,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
                   href={`https://console.cloud.google.com/storage/browser/${bucketName}?project=${projectId}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  title="Ouvrir dans la console GCS"
+                  title={t('openGcsConsole')}
                 >
                   <ExternalLink size={16} />
                 </a>
@@ -85,7 +88,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
             <Search size={18} color="var(--text-secondary)" />
             <input
               type="text"
-              placeholder="Rechercher un fichier..."
+              placeholder={t('searchPlaceholder')}
               onChange={(e) => onSearch(e.target.value)}
             />
           </div>
@@ -95,18 +98,18 @@ export const Explorer: React.FC<ExplorerProps> = ({
             className="btn btn-outline"
             onClick={onAnalyzeAll}
             disabled={analyzeProgress !== null || files.length === 0}
-            title="Analyser tous les fichiers avec Gemini"
+            title={t('analyzeAllTooltip')}
           >
             {analyzeProgress ? <Loader size={16} className="spinner" /> : <Sparkles size={16} />}
-            {analyzeProgress?.state === 'preparing' ? 'Préparation de l\'analyse...'
-              : analyzeProgress?.state === 'starting' ? 'Analyse en cours...'
-              : analyzeProgress?.state === 'running' ? `Analyse... ${analyzeProgress.done}/${analyzeProgress.total}`
-              : 'Analyser tout'}
+            {analyzeProgress?.state === 'preparing' ? t('analyzePreparing')
+              : analyzeProgress?.state === 'starting' ? t('analyzeStarting')
+              : analyzeProgress?.state === 'running' ? t('analyzeRunning', { done: analyzeProgress.done, total: analyzeProgress.total })
+              : t('analyzeAll')}
           </button>
           <div className="upload-dropdown">
             <button className="btn btn-outline" onClick={() => setUploadMenuOpen(!uploadMenuOpen)}>
               <ArrowUpFromLine size={16} />
-              Importer
+              {t('import')}
               <ChevronDown size={14} />
             </button>
             {uploadMenuOpen && (
@@ -115,11 +118,11 @@ export const Explorer: React.FC<ExplorerProps> = ({
                 <div className="upload-dropdown-menu">
                   <button onClick={() => { setUploadMenuOpen(false); document.getElementById('file-upload')?.click(); }}>
                     <FileUp size={16} />
-                    Fichiers
+                    {t('importFiles')}
                   </button>
                   <button onClick={() => { setUploadMenuOpen(false); document.getElementById('folder-upload')?.click(); }}>
                     <FolderUp size={16} />
-                    Dossier
+                    {t('importFolder')}
                   </button>
                 </div>
               </>
@@ -155,24 +158,24 @@ export const Explorer: React.FC<ExplorerProps> = ({
         {isDragActive && !internalDrag && (
           <div className="dropzone active">
             <Upload size={32} />
-            <p style={{ marginTop: '12px', fontWeight: 500 }}>Déposez les fichiers ici pour les téléverser</p>
+            <p style={{ marginTop: '12px', fontWeight: 500 }}>{t('dropFiles')}</p>
           </div>
         )}
 
         {!isDragActive && !internalDrag && files.length === 0 ? (
           <div className="empty-state">
             <FolderPlus size={48} />
-            <h3>Ce dossier est vide</h3>
-            <p>Glissez-déposez des fichiers ici ou utilisez le bouton Importer.</p>
+            <h3>{t('emptyFolder')}</h3>
+            <p>{t('emptyFolderHint')}</p>
           </div>
         ) : (
           <table className="file-table">
             <thead>
               <tr>
-                <th>Dossier</th>
-                <th>Nom</th>
-                <th>Modifié le</th>
-                <th style={{ width: '80px' }}>Actions</th>
+                <th>{t('colFolder')}</th>
+                <th>{t('colName')}</th>
+                <th>{t('colModified')}</th>
+                <th style={{ width: '80px' }}>{t('colActions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -211,10 +214,10 @@ export const Explorer: React.FC<ExplorerProps> = ({
                             }}
                             autoFocus
                           />
-                          <button className="icon-btn" title="Valider" onClick={(e) => { e.stopPropagation(); confirmEditing(file); }}>
+                          <button className="icon-btn" title={tc('confirm')} onClick={(e) => { e.stopPropagation(); confirmEditing(file); }}>
                             <Check size={14} />
                           </button>
-                          <button className="icon-btn" title="Annuler" onClick={(e) => { e.stopPropagation(); cancelEditing(); }}>
+                          <button className="icon-btn" title={tc('cancel')} onClick={(e) => { e.stopPropagation(); cancelEditing(); }}>
                             <X size={14} />
                           </button>
                         </>
@@ -223,7 +226,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
                           {file.name}
                           <button
                             className="icon-btn"
-                            title="Renommer"
+                            title={tc('rename')}
                             onClick={(e) => { e.stopPropagation(); startEditing(file); }}
                           >
                             <Pencil size={14} />
@@ -235,13 +238,13 @@ export const Explorer: React.FC<ExplorerProps> = ({
                   <td>{format(new Date(file.updated), 'dd/MM/yyyy')}</td>
                   <td>
                     <div className="file-actions" onClick={(e) => e.stopPropagation()}>
-                      <button className="icon-btn" onClick={() => onSelectFile(file)} title="Voir les métadonnées">
+                      <button className="icon-btn" onClick={() => onSelectFile(file)} title={tc('viewMetadata')}>
                         <Eye size={16} />
                       </button>
-                      <button className="icon-btn" onClick={() => onDownloadFile(file.id)} title="Télécharger">
+                      <button className="icon-btn" onClick={() => onDownloadFile(file.id)} title={tc('download')}>
                         <Download size={16} />
                       </button>
-                      <button className="icon-btn danger" onClick={() => onDeleteFile(file.id)} title="Supprimer">
+                      <button className="icon-btn danger" onClick={() => onDeleteFile(file.id)} title={tc('delete')}>
                         <Trash2 size={16} />
                       </button>
                     </div>

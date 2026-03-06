@@ -1,0 +1,29 @@
+{
+  "cancel": "Annuler",
+  "close": "Fermer",
+  "save": "Enregistrer",
+  "delete": "Supprimer",
+  "rename": "Renommer",
+  "confirm": "Valider",
+  "loading": "Chargement...",
+  "refresh": "Rafraîchir",
+  "download": "Télécharger",
+  "viewMetadata": "Voir les métadonnées",
+  "error": {
+    "loadData": "Erreur lors du chargement des données.",
+    "upload": "Erreur lors du téléversement.",
+    "update": "Erreur lors de la mise à jour.",
+    "delete": "Erreur lors de la suppression.",
+    "rename": "Erreur lors du renommage.",
+    "move": "Erreur lors du déplacement.",
+    "createFolder": "Erreur lors de la création du dossier.",
+    "analysis": "Erreur lors du lancement de l'analyse.",
+    "batchFailed": "L'analyse batch a échoué.",
+    "loadDetails": "Erreur lors du chargement des détails.",
+    "renameFolder": "Erreur lors du renommage du dossier.",
+    "deleteFolder": "Erreur lors de la suppression du dossier."
+  },
+  "success": {
+    "metadataUpdated": "Métadonnées mises à jour avec succès."
+  }
+}

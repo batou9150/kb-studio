@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import Markdown from 'react-markdown';
 import { api } from '../api';
 import type { AnswerQueryResponse } from '../types';
@@ -22,6 +23,8 @@ interface DataStoreOption {
 }
 
 export const AnswerPanel: React.FC = () => {
+  const { t } = useTranslation('answer');
+  const tc = useTranslation('common').t;
   const [dataStores, setDataStores] = useState<DataStoreOption[]>([]);
   const [dataStoresLoading, setDataStoresLoading] = useState(true);
   const [dataStoreId, setDataStoreId] = useState('');
@@ -111,14 +114,14 @@ export const AnswerPanel: React.FC = () => {
       {/* Datastore selector */}
       <div className="vais-section">
         <div className="vais-section-header">
-          <h2>Search</h2>
+          <h2>{t('search')}</h2>
         </div>
 
         <div className="form-group" style={{ marginBottom: 16 }}>
-          <label>Datastore</label>
+          <label>{t('datastore')}</label>
           {dataStoresLoading ? (
             <div className="form-control" style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-secondary)' }}>
-              <Loader size={14} className="spinner" /> Chargement...
+              <Loader size={14} className="spinner" /> {tc('loading')}
             </div>
           ) : (
             <select
@@ -126,7 +129,7 @@ export const AnswerPanel: React.FC = () => {
               value={selectedKey}
               onChange={e => handleSelectChange(e.target.value)}
             >
-              <option value="" disabled>Sélectionner un datastore...</option>
+              <option value="" disabled>{t('selectDatastore')}</option>
               {dataStores.map(ds => (
                 <option key={`${ds.location}/${ds.dataStoreId}`} value={`${ds.location}/${ds.dataStoreId}`}>
                   {ds.displayName} ({ds.location}) — {ds.dataStoreId}
@@ -139,20 +142,20 @@ export const AnswerPanel: React.FC = () => {
         {/* Query input */}
         <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end' }}>
           <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-            <label>Prompt</label>
+            <label>{t('prompt')}</label>
             <textarea
               className="form-control"
               value={query}
               onChange={e => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Posez votre question..."
+              placeholder={t('promptPlaceholder')}
               rows={2}
               style={{ minHeight: 60 }}
             />
           </div>
           <button
             className="icon-btn primary"
-            title="Envoyer"
+            title={t('send')}
             onClick={handleSubmit}
             disabled={!dataStoreId || !query.trim() || loading}
             style={{ marginBottom: 4 }}
@@ -172,7 +175,7 @@ export const AnswerPanel: React.FC = () => {
       {/* Loading */}
       {loading && (
         <div className="loading">
-          <Loader size={20} className="spinner" /> Recherche en cours...
+          <Loader size={20} className="spinner" /> {t('searching')}
         </div>
       )}
 
@@ -187,7 +190,7 @@ export const AnswerPanel: React.FC = () => {
 
           {result.searchResults.length > 0 && (
             <div className="answer-results">
-              <h3 style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: 12 }}>Sources</h3>
+              <h3 style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: 12 }}>{t('sources')}</h3>
               {result.searchResults.map((sr, i) => {
                 const linkUrl = sr.uri?.startsWith('gs://')
                   ? `https://storage.cloud.google.com/${sr.uri.slice(5)}`
@@ -212,7 +215,7 @@ export const AnswerPanel: React.FC = () => {
           )}
 
           {!result.answerText && result.searchResults.length === 0 && (
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Aucun résultat trouvé.</p>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{t('noResults')}</p>
           )}
         </div>
       )}

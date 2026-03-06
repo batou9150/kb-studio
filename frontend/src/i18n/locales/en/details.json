@@ -1,0 +1,29 @@
+{
+  "metadata": "Metadata",
+  "analyzeWithGemini": "Analyze with Gemini",
+  "analyze": "Analyze",
+  "analyzeError": "Analysis error: {{error}}",
+  "valueDate": "Value date",
+  "category": "Category",
+  "description": "Description",
+  "saveChanges": "Save changes",
+  "categories": {
+    "none": "— Undefined —",
+    "faq": "FAQ / Frequently Asked Questions",
+    "how_to": "How-to Guide",
+    "manual": "Manual / Technical Documentation",
+    "troubleshooting": "Troubleshooting",
+    "meeting_minutes": "Meeting Minutes",
+    "policy": "Policy / Regulation",
+    "sop": "Standard Operating Procedure (SOP)",
+    "form": "Form",
+    "report": "Report",
+    "release_notes": "Release Notes",
+    "presentation": "Presentation",
+    "memo": "Memo / Internal Note",
+    "contract": "Contract / Agreement",
+    "whitepaper": "Whitepaper",
+    "marketing_asset": "Marketing Asset",
+    "other": "Other"
+  }
+}

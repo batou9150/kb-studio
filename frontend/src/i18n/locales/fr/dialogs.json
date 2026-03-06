@@ -1,0 +1,22 @@
+{
+  "duplicate": {
+    "title": "Fichiers existants",
+    "message_one": "Le fichier suivant existe déjà dans ce dossier :",
+    "message_other": "Les fichiers suivants existent déjà dans ce dossier :",
+    "confirm_one": "Voulez-vous remplacer ce fichier ?",
+    "confirm_other": "Voulez-vous remplacer ces fichiers ?",
+    "overwrite": "Remplacer"
+  },
+  "analyzeResults": {
+    "title": "Résultats de l'analyse",
+    "success": "Succès",
+    "failures": "Échecs",
+    "successDetails": "Détails des succès ({{count}})",
+    "failureDetails": "Détails des échecs ({{count}})",
+    "colDescription": "Description",
+    "colDate": "Date",
+    "colCategory": "Catégorie",
+    "colId": "ID",
+    "colError": "Erreur"
+  }
+}

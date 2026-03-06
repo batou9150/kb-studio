@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api';
 import { FolderPlus, Pencil, Trash2, AlertTriangle, Loader, History, Eye } from 'lucide-react';
 
@@ -20,6 +21,8 @@ interface AdminPanelProps {
 }
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ folders, onDataChanged }) => {
+  const { t, i18n } = useTranslation('admin');
+  const tc = useTranslation('common').t;
   const [loading, setLoading] = useState(false);
   const [batches, setBatches] = useState<BatchInfo[]>([]);
   const [expandedBatch, setExpandedBatch] = useState<{ name: string; data: BatchDetails } | null>(null);
@@ -30,55 +33,55 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ folders, onDataChanged }
   }, []);
 
   const handleCreateFolder = async () => {
-    const name = prompt('Nom du nouveau dossier :');
+    const name = prompt(t('newFolderPrompt'));
     if (!name) return;
     try {
       setLoading(true);
       await api.createFolder(name + '/');
       onDataChanged();
     } catch {
-      alert('Erreur lors de la création du dossier.');
+      alert(tc('error.createFolder'));
     } finally {
       setLoading(false);
     }
   };
 
   const handleRenameFolder = async (folder: string) => {
-    const newName = prompt('Nouveau nom du dossier :', folder.replace(/\/$/, ''));
+    const newName = prompt(t('renameFolderPrompt'), folder.replace(/\/$/, ''));
     if (!newName || newName === folder.replace(/\/$/, '')) return;
     try {
       setLoading(true);
       await api.renameFolder(folder, newName.endsWith('/') ? newName : newName + '/');
       onDataChanged();
     } catch {
-      alert('Erreur lors du renommage du dossier.');
+      alert(tc('error.renameFolder'));
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeleteFolder = async (folder: string) => {
-    if (!window.confirm(`Supprimer le dossier "${folder}" et tout son contenu ?`)) return;
+    if (!window.confirm(t('confirmDeleteFolder', { folder }))) return;
     try {
       setLoading(true);
       await api.deleteFolder(folder);
       onDataChanged();
     } catch {
-      alert('Erreur lors de la suppression du dossier.');
+      alert(tc('error.deleteFolder'));
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeleteAll = async () => {
-    if (!window.confirm('Supprimer TOUS les fichiers de la base de connaissances ?')) return;
-    if (!window.confirm('Cette action est irréversible. Confirmer la suppression ?')) return;
+    if (!window.confirm(t('confirmDeleteAll'))) return;
+    if (!window.confirm(t('confirmDeleteAllIrreversible'))) return;
     try {
       setLoading(true);
       await api.deleteAllFiles();
       onDataChanged();
     } catch {
-      alert('Erreur lors de la suppression.');
+      alert(tc('error.delete'));
     } finally {
       setLoading(false);
     }
@@ -94,7 +97,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ folders, onDataChanged }
       const data = await api.getAnalyzeDetails(batch.name);
       setExpandedBatch({ name: batch.name, data });
     } catch {
-      alert('Erreur lors du chargement des détails.');
+      alert(tc('error.loadDetails'));
     } finally {
       setLoadingDetails(null);
     }
@@ -103,7 +106,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ folders, onDataChanged }
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '—';
     try {
-      return new Date(dateStr).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+      return new Date(dateStr).toLocaleString(i18n.language, { dateStyle: 'short', timeStyle: 'short' });
     } catch {
       return dateStr;
     }
@@ -113,22 +116,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ folders, onDataChanged }
     <div className="admin-panel">
       <div className="admin-section">
         <div className="admin-section-header">
-          <h2>Gestion des dossiers</h2>
+          <h2>{t('folderManagement')}</h2>
           <button className="btn btn-primary" onClick={handleCreateFolder} disabled={loading}>
-            <FolderPlus size={16} /> Nouveau dossier
+            <FolderPlus size={16} /> {t('newFolder')}
           </button>
         </div>
 
         <table className="file-table">
           <thead>
             <tr>
-              <th>Dossier</th>
-              <th style={{ width: 120 }}>Actions</th>
+              <th>{t('colFolder')}</th>
+              <th style={{ width: 120 }}>{t('colActions')}</th>
             </tr>
           </thead>
           <tbody>
             {folders.length === 0 ? (
-              <tr><td colSpan={2} style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>Aucun dossier</td></tr>
+              <tr><td colSpan={2} style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{t('noFolder')}</td></tr>
             ) : (
               folders.map(folder => {
                 const depth = folder.split('/').filter(Boolean).length - 1;
@@ -137,10 +140,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ folders, onDataChanged }
                     <td style={{ paddingLeft: `${16 + depth * 20}px` }}>{folder}</td>
                     <td>
                       <div className="file-actions">
-                        <button className="icon-btn" title="Renommer" onClick={() => handleRenameFolder(folder)} disabled={loading}>
+                        <button className="icon-btn" title={tc('rename')} onClick={() => handleRenameFolder(folder)} disabled={loading}>
                           <Pencil size={16} />
                         </button>
-                        <button className="icon-btn danger" title="Supprimer" onClick={() => handleDeleteFolder(folder)} disabled={loading}>
+                        <button className="icon-btn danger" title={tc('delete')} onClick={() => handleDeleteFolder(folder)} disabled={loading}>
                           <Trash2 size={16} />
                         </button>
                       </div>
@@ -155,21 +158,21 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ folders, onDataChanged }
 
       <div className="admin-section">
         <div className="admin-section-header">
-          <h2><History size={20} style={{ verticalAlign: 'middle', marginRight: 8 }} />Historique des analyses</h2>
+          <h2><History size={20} style={{ verticalAlign: 'middle', marginRight: 8 }} />{t('analysisHistory')}</h2>
         </div>
 
         <table className="file-table">
           <thead>
             <tr>
-              <th>Nom</th>
-              <th>État</th>
-              <th>Date</th>
-              <th style={{ width: 140 }}>Actions</th>
+              <th>{t('colName')}</th>
+              <th>{t('colState')}</th>
+              <th>{t('colDate')}</th>
+              <th style={{ width: 140 }}>{t('colActions')}</th>
             </tr>
           </thead>
           <tbody>
             {batches.length === 0 ? (
-              <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>Aucune analyse</td></tr>
+              <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{t('noAnalysis')}</td></tr>
             ) : (
               batches.map(batch => (
                 <React.Fragment key={batch.name}>
@@ -185,7 +188,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ folders, onDataChanged }
                         onClick={() => handleViewDetails(batch)}
                       >
                         {loadingDetails === batch.name ? <Loader size={14} className="spinner" /> : <Eye size={14} />}
-                        {expandedBatch?.name === batch.name ? 'Masquer' : 'Voir les détails'}
+                        {expandedBatch?.name === batch.name ? t('hideDetails') : t('viewDetails')}
                       </button>
                     </td>
                   </tr>
@@ -193,20 +196,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ folders, onDataChanged }
                     <tr className="history-detail-row">
                       <td colSpan={4}>
                         <p style={{ marginBottom: 8 }}>
-                          <span style={{ color: 'var(--success-color)', fontWeight: 600 }}>{expandedBatch.data.results.length} Succès</span>
+                          <span style={{ color: 'var(--success-color)', fontWeight: 600 }}>{expandedBatch.data.results.length} {t('success')}</span>
                           {' / '}
-                          <span style={{ color: 'var(--danger-color)', fontWeight: 600 }}>{expandedBatch.data.failed.length} Échecs</span>
+                          <span style={{ color: 'var(--danger-color)', fontWeight: 600 }}>{expandedBatch.data.failed.length} {t('failures')}</span>
                         </p>
 
                         {expandedBatch.data.results.length > 0 && (
                           <details>
-                            <summary style={{ fontWeight: 600, cursor: 'pointer', marginBottom: 8 }}>Détails des succès ({expandedBatch.data.results.length})</summary>
+                            <summary style={{ fontWeight: 600, cursor: 'pointer', marginBottom: 8 }}>{t('successDetails', { count: expandedBatch.data.results.length })}</summary>
                             <table className="analyze-results-table">
                               <thead>
                                 <tr>
-                                  <th>Description</th>
-                                  <th>Date</th>
-                                  <th>Catégorie</th>
+                                  <th>{t('colDescription')}</th>
+                                  <th>{t('colDate')}</th>
+                                  <th>{t('colCategory')}</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -224,12 +227,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ folders, onDataChanged }
 
                         {expandedBatch.data.failed.length > 0 && (
                           <details>
-                            <summary style={{ fontWeight: 600, cursor: 'pointer', marginBottom: 8 }}>Détails des échecs ({expandedBatch.data.failed.length})</summary>
+                            <summary style={{ fontWeight: 600, cursor: 'pointer', marginBottom: 8 }}>{t('failureDetails', { count: expandedBatch.data.failed.length })}</summary>
                             <table className="analyze-results-table">
                               <thead>
                                 <tr>
-                                  <th>ID</th>
-                                  <th>Erreur</th>
+                                  <th>{t('colId')}</th>
+                                  <th>{t('colError')}</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -256,12 +259,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ folders, onDataChanged }
       <div className="danger-zone">
         <div className="danger-zone-header">
           <AlertTriangle size={20} />
-          <h3>Zone dangereuse</h3>
+          <h3>{t('dangerZone')}</h3>
         </div>
-        <p>Supprimer définitivement tous les fichiers et métadonnées de la base de connaissances.</p>
+        <p>{t('dangerZoneDesc')}</p>
         <button className="btn btn-danger" onClick={handleDeleteAll} disabled={loading}>
           {loading ? <Loader size={16} className="spinner" /> : <Trash2 size={16} />}
-          {loading ? 'Suppression en cours...' : 'Supprimer tous les fichiers'}
+          {loading ? t('deletingAll') : t('deleteAll')}
         </button>
       </div>
     </div>
