@@ -1,5 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
-import { getKbMetadata, updateKbEntry, pathFromUri } from './storage';
+import { getKbMetadata, updateKbEntry, bulkUpdateKbEntries, pathFromUri } from './storage';
 import { Storage } from '@google-cloud/storage';
 import type { KbEntry } from './storage';
 
@@ -111,12 +111,103 @@ export async function startBatchAnalysis(): Promise<{ batchName: string; totalFi
   };
 }
 
+export async function listBatches(): Promise<{
+  name: string;
+  state: string;
+  displayName: string;
+  createTime: string;
+}[]> {
+  const stateMap: Record<string, string> = {
+    JOB_STATE_SUCCEEDED: 'succeeded',
+    JOB_STATE_FAILED: 'failed',
+    JOB_STATE_CANCELLED: 'cancelled',
+    JOB_STATE_RUNNING: 'running',
+    JOB_STATE_PENDING: 'running',
+  };
+
+  const result: { name: string; state: string; displayName: string; createTime: string }[] = [];
+  const pager = await ai.batches.list({ config: { pageSize: 100 } });
+  for await (const batch of pager) {
+    const dn = batch.displayName ?? '';
+    if (!dn.startsWith('kb-studio-analysis-')) continue;
+    result.push({
+      name: batch.name!,
+      state: stateMap[batch.state ?? ''] ?? 'unknown',
+      displayName: dn,
+      createTime: (batch as any).createTime ?? '',
+    });
+  }
+  return result;
+}
+
+function extractResponseError(resp: any): string | null {
+  // Check for API-level error on the response item
+  if (resp.error) {
+    const e = resp.error;
+    return e.message || (typeof e === 'string' ? e : JSON.stringify(e));
+  }
+
+  const candidate = resp.response?.candidates?.[0];
+  if (!candidate) return 'No candidate in response';
+
+  // Check finishReason for non-success stops
+  const reason = candidate.finishReason;
+  if (reason && reason !== 'FINISH_REASON_STOP' && reason !== 'STOP') {
+    const labels: Record<string, string> = {
+      FINISH_REASON_SAFETY: 'Blocked: safety filter',
+      FINISH_REASON_RECITATION: 'Blocked: unauthorized citation',
+      FINISH_REASON_MAX_TOKENS: 'Stopped: max tokens reached',
+      FINISH_REASON_BLOCKLIST: 'Blocked: blocked terms',
+      FINISH_REASON_PROHIBITED_CONTENT: 'Blocked: prohibited content',
+      FINISH_REASON_SPII: 'Blocked: sensitive personal info',
+    };
+    return labels[reason] || `Stopped: ${reason}`;
+  }
+
+  const text = candidate.content?.parts?.[0]?.text ?? '';
+  if (!text.trim()) return 'Empty response from model';
+
+  return null; // No error
+}
+
+export async function getBatchAnalysisDetails(batchName: string): Promise<{
+  results: { id: string; description: string; value_date: string; category: string }[];
+  failed: { id: string; error: string }[];
+}> {
+  const batch = await ai.batches.get({ name: batchName });
+  const responses = batch.dest?.inlinedResponses ?? [];
+  const results: { id: string; description: string; value_date: string; category: string }[] = [];
+  const failed: { id: string; error: string }[] = [];
+
+  for (const resp of responses) {
+    const id = resp.metadata?.id;
+    if (!id) continue;
+
+    const errorMsg = extractResponseError(resp);
+    if (errorMsg) {
+      failed.push({ id, error: errorMsg });
+      continue;
+    }
+
+    try {
+      const text = resp.response?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+      const parsed = parseAnalysisResponse(text);
+      results.push({ id, ...parsed });
+    } catch (err: any) {
+      failed.push({ id, error: `Parse error: ${err.message || String(err)}` });
+    }
+  }
+
+  return { results, failed };
+}
+
 export async function getBatchAnalysisStatus(batchName: string): Promise<{
   state: string;
   succeededCount?: number;
   failedCount?: number;
   totalCount?: number;
   results?: { id: string; description: string; value_date: string; category: string }[];
+  failed?: { id: string; error: string }[];
 }> {
   const batch = await ai.batches.get({ name: batchName });
   const state = batch.state ?? 'JOB_STATE_UNSPECIFIED';
@@ -124,21 +215,38 @@ export async function getBatchAnalysisStatus(batchName: string): Promise<{
   if (state === 'JOB_STATE_SUCCEEDED') {
     const responses = batch.dest?.inlinedResponses ?? [];
     const results: { id: string; description: string; value_date: string; category: string }[] = [];
+    const failed: { id: string; error: string }[] = [];
+    const bulkUpdates = new Map<string, Partial<{ description: string; value_date: string; category: string }>>();
 
     for (const resp of responses) {
+      const id = resp.metadata?.id;
+      if (!id) continue;
+
+      const respError = extractResponseError(resp);
+      if (respError) {
+        console.error(`Batch response error for id ${id}:`, respError);
+        failed.push({ id, error: respError });
+        continue;
+      }
+
       try {
         const text = resp.response?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
         const parsed = parseAnalysisResponse(text);
-        const id = resp.metadata?.id;
-        if (!id) continue;
-        await updateKbEntry(id, parsed);
+        bulkUpdates.set(id, parsed);
         results.push({ id, ...parsed });
-      } catch (err) {
-        console.error(`Failed to parse batch response for id ${resp.metadata?.id}:`, err);
+      } catch (err: any) {
+        const errorMsg = `Parse error: ${err.message || String(err)}`;
+        console.error(`Failed to parse batch response for id ${id}:`, errorMsg);
+        failed.push({ id, error: errorMsg });
       }
     }
 
-    return { state: 'succeeded', results };
+    // Single write for all successful updates
+    if (bulkUpdates.size > 0) {
+      await bulkUpdateKbEntries(bulkUpdates);
+    }
+
+    return { state: 'succeeded', results, failed };
   }
 
   if (state === 'JOB_STATE_FAILED' || state === 'JOB_STATE_CANCELLED') {

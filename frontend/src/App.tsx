@@ -7,6 +7,7 @@ import { Sidebar } from './components/Sidebar';
 import { Explorer } from './components/Explorer';
 import { DetailsPanel } from './components/DetailsPanel';
 import { DuplicateDialog } from './components/DuplicateDialog';
+import { AnalyzeResultsDialog } from './components/AnalyzeResultsDialog';
 import { AdminPanel } from './components/AdminPanel';
 import { SearchPanel } from './components/SearchPanel';
 import { AnswerPanel } from './components/AnswerPanel';
@@ -24,8 +25,19 @@ function App() {
   const [loading, setLoading] = useState(false);
 
   // Batch analysis state
-  const [analyzeProgress, setAnalyzeProgress] = useState<{ done: number; total: number } | null>(null);
+  const [analyzeProgress, setAnalyzeProgress] = useState<
+    | { state: 'preparing' }
+    | { state: 'starting' }
+    | { state: 'running'; done: number; total: number }
+    | null
+  >(null);
   const batchNameRef = useRef<string | null>(null);
+
+  // Analyze results state
+  const [analyzeResults, setAnalyzeResults] = useState<{
+    results: { id: string; description: string; value_date: string; category: string }[];
+    failed: { id: string; error: string }[];
+  } | null>(null);
 
   // Duplicate detection state
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
@@ -205,10 +217,12 @@ function App() {
 
   const handleAnalyzeAll = async () => {
     try {
-      const { batchName, totalFiles } = await api.startAnalyzeAll();
+      setAnalyzeProgress({ state: 'preparing' });
+      const { batchName } = await api.startAnalyzeAll();
       batchNameRef.current = batchName;
-      setAnalyzeProgress({ done: 0, total: totalFiles });
+      setAnalyzeProgress({ state: 'starting' });
     } catch (err) {
+      setAnalyzeProgress(null);
       alert('Erreur lors du lancement de l\'analyse.');
     }
   };
@@ -222,16 +236,23 @@ function App() {
         if (status.state === 'succeeded') {
           batchNameRef.current = null;
           setAnalyzeProgress(null);
+          setAnalyzeResults({
+            results: status.results ?? [],
+            failed: status.failed ?? [],
+          });
           loadData();
         } else if (status.state === 'failed' || status.state === 'cancelled') {
           batchNameRef.current = null;
           setAnalyzeProgress(null);
           alert('L\'analyse batch a échoué.');
         } else {
-          setAnalyzeProgress({
-            done: status.succeededCount ?? 0,
-            total: status.totalCount ?? analyzeProgress?.total ?? 0,
-          });
+          const done = status.succeededCount ?? 0;
+          const total = status.totalCount ?? 0;
+          if (total > 0) {
+            setAnalyzeProgress({ state: 'running', done, total });
+          } else {
+            setAnalyzeProgress({ state: 'starting' });
+          }
         }
       } catch {
         // Ignore polling errors, retry next interval
@@ -243,6 +264,14 @@ function App() {
 
   return (
     <div className="app-container">
+      {analyzeResults && (
+        <AnalyzeResultsDialog
+          results={analyzeResults.results}
+          failed={analyzeResults.failed}
+          onClose={() => setAnalyzeResults(null)}
+        />
+      )}
+
       {duplicates.length > 0 && (
         <DuplicateDialog
           duplicates={duplicates}

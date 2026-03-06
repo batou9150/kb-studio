@@ -296,6 +296,17 @@ export const updateKbEntry = async (id: string, updates: Partial<KbEntry['struct
   return entry;
 };
 
+export const bulkUpdateKbEntries = async (updates: Map<string, Partial<KbEntry['structData']>>) => {
+  const metadata = await getKbMetadata();
+  for (const entry of metadata) {
+    const upd = updates.get(entry.id);
+    if (upd) {
+      entry.structData = { ...entry.structData, ...upd };
+    }
+  }
+  await saveKbMetadata(metadata);
+};
+
 export const renameFolder = async (oldPath: string, newPath: string) => {
   const oldPrefix = oldPath.endsWith('/') ? oldPath : oldPath + '/';
   const newPrefix = newPath.endsWith('/') ? newPath : newPath + '/';

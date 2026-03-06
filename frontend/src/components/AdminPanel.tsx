@@ -1,6 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { api } from '../api';
-import { FolderPlus, Pencil, Trash2, AlertTriangle, Loader } from 'lucide-react';
+import { FolderPlus, Pencil, Trash2, AlertTriangle, Loader, History, Eye } from 'lucide-react';
+
+interface BatchInfo {
+  name: string;
+  state: string;
+  displayName: string;
+  createTime: string;
+}
+
+interface BatchDetails {
+  results: { id: string; description: string; value_date: string; category: string }[];
+  failed: { id: string; error: string }[];
+}
 
 interface AdminPanelProps {
   folders: string[];
@@ -9,6 +21,13 @@ interface AdminPanelProps {
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ folders, onDataChanged }) => {
   const [loading, setLoading] = useState(false);
+  const [batches, setBatches] = useState<BatchInfo[]>([]);
+  const [expandedBatch, setExpandedBatch] = useState<{ name: string; data: BatchDetails } | null>(null);
+  const [loadingDetails, setLoadingDetails] = useState<string | null>(null);
+
+  useEffect(() => {
+    api.getAnalyzeHistory().then(setBatches).catch(() => {});
+  }, []);
 
   const handleCreateFolder = async () => {
     const name = prompt('Nom du nouveau dossier :');
@@ -65,6 +84,31 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ folders, onDataChanged }
     }
   };
 
+  const handleViewDetails = async (batch: BatchInfo) => {
+    if (expandedBatch?.name === batch.name) {
+      setExpandedBatch(null);
+      return;
+    }
+    try {
+      setLoadingDetails(batch.name);
+      const data = await api.getAnalyzeDetails(batch.name);
+      setExpandedBatch({ name: batch.name, data });
+    } catch {
+      alert('Erreur lors du chargement des détails.');
+    } finally {
+      setLoadingDetails(null);
+    }
+  };
+
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return '—';
+    try {
+      return new Date(dateStr).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+    } catch {
+      return dateStr;
+    }
+  };
+
   return (
     <div className="admin-panel">
       <div className="admin-section">
@@ -104,6 +148,106 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ folders, onDataChanged }
                   </tr>
                 );
               })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="admin-section">
+        <div className="admin-section-header">
+          <h2><History size={20} style={{ verticalAlign: 'middle', marginRight: 8 }} />Historique des analyses</h2>
+        </div>
+
+        <table className="file-table">
+          <thead>
+            <tr>
+              <th>Nom</th>
+              <th>État</th>
+              <th>Date</th>
+              <th style={{ width: 140 }}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {batches.length === 0 ? (
+              <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>Aucune analyse</td></tr>
+            ) : (
+              batches.map(batch => (
+                <React.Fragment key={batch.name}>
+                  <tr>
+                    <td>{batch.displayName}</td>
+                    <td><span className={`batch-state-badge batch-state-${batch.state}`}>{batch.state}</span></td>
+                    <td>{formatDate(batch.createTime)}</td>
+                    <td>
+                      <button
+                        className="btn btn-outline"
+                        style={{ padding: '4px 10px', fontSize: '0.8rem' }}
+                        disabled={batch.state !== 'succeeded' || loadingDetails === batch.name}
+                        onClick={() => handleViewDetails(batch)}
+                      >
+                        {loadingDetails === batch.name ? <Loader size={14} className="spinner" /> : <Eye size={14} />}
+                        {expandedBatch?.name === batch.name ? 'Masquer' : 'Voir les détails'}
+                      </button>
+                    </td>
+                  </tr>
+                  {expandedBatch?.name === batch.name && (
+                    <tr className="history-detail-row">
+                      <td colSpan={4}>
+                        <p style={{ marginBottom: 8 }}>
+                          <span style={{ color: 'var(--success-color)', fontWeight: 600 }}>{expandedBatch.data.results.length} Succès</span>
+                          {' / '}
+                          <span style={{ color: 'var(--danger-color)', fontWeight: 600 }}>{expandedBatch.data.failed.length} Échecs</span>
+                        </p>
+
+                        {expandedBatch.data.results.length > 0 && (
+                          <details>
+                            <summary style={{ fontWeight: 600, cursor: 'pointer', marginBottom: 8 }}>Détails des succès ({expandedBatch.data.results.length})</summary>
+                            <table className="analyze-results-table">
+                              <thead>
+                                <tr>
+                                  <th>Description</th>
+                                  <th>Date</th>
+                                  <th>Catégorie</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {expandedBatch.data.results.map((r) => (
+                                  <tr key={r.id}>
+                                    <td>{r.description}</td>
+                                    <td>{r.value_date}</td>
+                                    <td>{r.category}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </details>
+                        )}
+
+                        {expandedBatch.data.failed.length > 0 && (
+                          <details>
+                            <summary style={{ fontWeight: 600, cursor: 'pointer', marginBottom: 8 }}>Détails des échecs ({expandedBatch.data.failed.length})</summary>
+                            <table className="analyze-results-table">
+                              <thead>
+                                <tr>
+                                  <th>ID</th>
+                                  <th>Erreur</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {expandedBatch.data.failed.map((f) => (
+                                  <tr key={f.id}>
+                                    <td title={f.id}>{f.id.length > 12 ? f.id.slice(0, 12) + '…' : f.id}</td>
+                                    <td>{f.error}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </details>
+                        )}
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              ))
             )}
           </tbody>
         </table>

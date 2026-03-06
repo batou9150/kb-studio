@@ -75,6 +75,14 @@ export const api = {
     const res = await apiClient.get('/files/analyze-all/status', { params: { batchName } });
     return res.data;
   },
+  getAnalyzeHistory: async (): Promise<{ name: string; state: string; displayName: string; createTime: string }[]> => {
+    const res = await apiClient.get('/files/analyze-all/history');
+    return res.data;
+  },
+  getAnalyzeDetails: async (batchName: string): Promise<{ results: { id: string; description: string; value_date: string; category: string }[]; failed: { id: string; error: string }[] }> => {
+    const res = await apiClient.get(`/files/analyze-all/${encodeURIComponent(batchName)}/details`);
+    return res.data;
+  },
   deleteFile: async (id: string) => {
     const res = await apiClient.delete(`/files/${encodeURIComponent(id)}`);
     return res.data;
