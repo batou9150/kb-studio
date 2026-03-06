@@ -323,15 +323,15 @@ function App() {
       />
 
       {currentView === 'admin' ? (
-        <div className="main-content">
+        <div className="main-content scrollable">
           <AdminPanel folders={folders} onDataChanged={loadData} bucketNames={bucketNames} selectedBucket={selectedBucket} onBucketChange={handleBucketChange} projectId={projectId} />
         </div>
       ) : currentView === 'index' ? (
-        <div className="main-content">
+        <div className="main-content scrollable">
           <SearchPanel bucketNames={bucketNames} selectedBucket={selectedBucket} onBucketChange={handleBucketChange} projectId={projectId} />
         </div>
       ) : currentView === 'answer' ? (
-        <div className="main-content">
+        <div className="main-content scrollable">
           <AnswerPanel projectId={projectId} />
         </div>
       ) : (
