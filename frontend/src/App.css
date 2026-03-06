@@ -225,8 +225,16 @@ body {
   color: white;
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   background-color: var(--primary-hover);
+}
+
+.btn-primary:disabled {
+  background-color: var(--border-color);
+  cursor: default;
+  outline: none;
+  box-shadow: none;
+  border-color: transparent;
 }
 
 .btn-outline {

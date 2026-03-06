@@ -59,8 +59,20 @@ export const api = {
     });
     return res.data;
   },
-  updateFileMetadata: async (id: string, description: string, value_date: string) => {
-    const res = await apiClient.patch(`/files/${encodeURIComponent(id)}`, { description, value_date });
+  updateFileMetadata: async (id: string, description: string, value_date: string, category: string) => {
+    const res = await apiClient.patch(`/files/${encodeURIComponent(id)}`, { description, value_date, category });
+    return res.data;
+  },
+  analyzeFile: async (id: string): Promise<{ description: string; value_date: string; category: string }> => {
+    const res = await apiClient.post(`/files/${encodeURIComponent(id)}/analyze`);
+    return res.data;
+  },
+  startAnalyzeAll: async (): Promise<{ batchName: string; totalFiles: number }> => {
+    const res = await apiClient.post('/files/analyze-all');
+    return res.data;
+  },
+  getAnalyzeAllStatus: async (batchName: string) => {
+    const res = await apiClient.get('/files/analyze-all/status', { params: { batchName } });
     return res.data;
   },
   deleteFile: async (id: string) => {
