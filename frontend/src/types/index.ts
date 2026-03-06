@@ -5,6 +5,7 @@ export interface Metadata {
     description: string;
     value_date: string;
     category: string;
+    folder: string;
   };
   content: {
     mimeType: string;

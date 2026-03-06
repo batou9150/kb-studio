@@ -32,6 +32,7 @@ export interface KbEntry {
     description: string;
     value_date: string;
     category: string;
+    folder: string;
   };
   content: {
     mimeType: string;
@@ -98,6 +99,7 @@ async function reconcileKbMetadata(): Promise<void> {
     if (knownPaths.has(file.name)) continue;
 
     const fileName = file.name.split('/').pop() || file.name;
+    const folder = file.name.includes('/') ? file.name.substring(0, file.name.lastIndexOf('/')) : '';
     newEntries.push({
       id: uuidv4(),
       structData: {
@@ -105,6 +107,7 @@ async function reconcileKbMetadata(): Promise<void> {
         description: '',
         value_date: extractValueDate(fileName),
         category: '',
+        folder,
       },
       content: {
         mimeType: file.metadata.contentType || 'application/octet-stream',
@@ -236,6 +239,7 @@ export const moveFile = async (filePath: string, newFolderPath: string) => {
   const entry = metadata.find(m => pathFromUri(m.content.uri) === filePath);
   if (entry) {
     entry.content.uri = `gs://${bucketName}/${newFilePath}`;
+    entry.structData.folder = newFolderPath.replace(/\/+$/, '');
     await saveKbMetadata(metadata);
   }
   return newFilePath;
@@ -326,6 +330,8 @@ export const renameFolder = async (oldPath: string, newPath: string) => {
     if (entryPath.startsWith(oldPrefix)) {
       const newFilePath = newPrefix + entryPath.slice(oldPrefix.length);
       entry.content.uri = `gs://${bucketName}/${newFilePath}`;
+      const entryFolder = newFilePath.includes('/') ? newFilePath.substring(0, newFilePath.lastIndexOf('/')) : '';
+      entry.structData.folder = entryFolder;
       changed = true;
     }
   }
