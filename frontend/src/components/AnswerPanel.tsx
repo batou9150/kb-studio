@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { api } from '../api';
 import type { AnswerQueryResponse } from '../types';
 import { Loader, SendHorizontal, ExternalLink } from 'lucide-react';
@@ -116,7 +117,7 @@ export const AnswerPanel: React.FC<AnswerPanelProps> = ({ projectId }) => {
         <div className="vais-section">
           {result.answerText && (
             <div className="answer-text">
-              <Markdown>{result.answerText}</Markdown>
+              <Markdown remarkPlugins={[remarkGfm]}>{result.answerText}</Markdown>
             </div>
           )}
 
