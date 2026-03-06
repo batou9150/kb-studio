@@ -2,7 +2,8 @@ import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDropzone } from 'react-dropzone';
 import type { FileItem } from '../types';
-import { FileText, Image, File as FileIcon, Trash2, Download, FolderPlus, ArrowUpFromLine, FileUp, FolderUp, Folder, Pencil, Check, X, Search, ChevronDown, Upload, Eye, Sparkles, Loader, ExternalLink } from 'lucide-react';
+import { FileText, Image, File as FileIcon, Trash2, Download, FolderPlus, ArrowUpFromLine, FileUp, FolderUp, Folder, Pencil, Check, X, Search, ChevronDown, Upload, Eye, Sparkles, Loader } from 'lucide-react';
+import { BucketSelector } from './BucketSelector';
 import { format } from 'date-fns';
 
 interface ExplorerProps {
@@ -16,14 +17,16 @@ interface ExplorerProps {
   onSearch: (query: string) => void;
   onAnalyzeAll: () => void;
   analyzeProgress: { state: 'preparing' } | { state: 'starting' } | { state: 'running'; done: number; total: number } | null;
-  bucketName: string;
+  bucketNames: string[];
+  selectedBucket: string;
+  onBucketChange: (bucket: string) => void;
   projectId: string;
   sidebar?: React.ReactNode;
   detailsPanel?: React.ReactNode;
 }
 
 export const Explorer: React.FC<ExplorerProps> = ({
-  files, selectedFile, onSelectFile, onUpload, onDeleteFile, onDownloadFile, onRenameFile, onSearch, onAnalyzeAll, analyzeProgress, bucketName, projectId, sidebar, detailsPanel
+  files, selectedFile, onSelectFile, onUpload, onDeleteFile, onDownloadFile, onRenameFile, onSearch, onAnalyzeAll, analyzeProgress, bucketNames, selectedBucket, onBucketChange, projectId, sidebar, detailsPanel
 }) => {
   const { t } = useTranslation('explorer');
   const tc = useTranslation('common').t;
@@ -66,22 +69,13 @@ export const Explorer: React.FC<ExplorerProps> = ({
 
       <div className="explorer-toolbar">
         <div className="explorer-toolbar-left">
-          {bucketName && (
-            <>
-              <span className="bucket-name">{bucketName}</span>
-              {projectId && (
-                <a
-                  className="icon-btn"
-                  href={`https://console.cloud.google.com/storage/browser/${bucketName}?project=${projectId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title={t('openGcsConsole')}
-                >
-                  <ExternalLink size={16} />
-                </a>
-              )}
-            </>
-          )}
+          <BucketSelector
+            bucketNames={bucketNames}
+            selectedBucket={selectedBucket}
+            onBucketChange={onBucketChange}
+            projectId={projectId}
+            gcsConsoleTitle={t('viewInConsole')}
+          />
         </div>
         <div className="explorer-toolbar-center">
           <div className="search-bar">

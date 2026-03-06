@@ -3,13 +3,24 @@ import type { FileItem, ImportOperationStatus, ImportHistoryEntry, AnswerQueryRe
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
 
+let currentBucket = '';
+export function setCurrentBucket(bucket: string) { currentBucket = bucket; }
+
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
 });
 
+// Auto-append ?bucket= to all API calls
+apiClient.interceptors.request.use((config) => {
+  if (currentBucket) {
+    config.params = { ...config.params, bucket: currentBucket };
+  }
+  return config;
+});
+
 export const api = {
   // Config
-  getConfig: async (): Promise<{ bucketName: string; projectId: string; appName: string; appLogo: string }> => {
+  getConfig: async (): Promise<{ bucketName: string; bucketNames: string[]; projectId: string; appName: string; appLogo: string }> => {
     const res = await apiClient.get('/config');
     return res.data;
   },
@@ -77,8 +88,10 @@ export const api = {
     const res = await apiClient.post('/files/analyze-all');
     return res.data;
   },
-  getAnalyzeAllStatus: async (batchName: string) => {
-    const res = await apiClient.get('/files/analyze-all/status', { params: { batchName } });
+  getAnalyzeAllStatus: async (batchName: string, bucket?: string) => {
+    const params: Record<string, string> = { batchName };
+    if (bucket) params.bucket = bucket;
+    const res = await apiClient.get('/files/analyze-all/status', { params });
     return res.data;
   },
   getAnalyzeHistory: async (): Promise<{ name: string; state: string; displayName: string; createTime: string }[]> => {
@@ -94,7 +107,8 @@ export const api = {
     return res.data;
   },
   getDownloadUrl: (id: string): string => {
-    return `${API_BASE_URL}/files/${encodeURIComponent(id)}/download`;
+    const url = `${API_BASE_URL}/files/${encodeURIComponent(id)}/download`;
+    return currentBucket ? `${url}?bucket=${encodeURIComponent(currentBucket)}` : url;
   },
   renameFile: async (id: string, newName: string) => {
     const res = await apiClient.put(`/files/${encodeURIComponent(id)}/rename`, { newName });
@@ -117,7 +131,8 @@ export const api = {
     return res.data;
   },
   getPreviewUrl: (id: string): string => {
-    return `${API_BASE_URL}/files/${encodeURIComponent(id)}/preview`;
+    const url = `${API_BASE_URL}/files/${encodeURIComponent(id)}/preview`;
+    return currentBucket ? `${url}?bucket=${encodeURIComponent(currentBucket)}` : url;
   },
   getTextContent: async (id: string): Promise<string> => {
     const res = await apiClient.get(`/files/${encodeURIComponent(id)}/download`, {

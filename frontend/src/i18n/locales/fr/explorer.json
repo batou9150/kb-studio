@@ -3,7 +3,7 @@
   "newFolder": "Nouveau Dossier",
   "newFolderPrompt": "Nom du nouveau dossier:",
   "root": "Racine",
-  "openGcsConsole": "Ouvrir dans la console GCS",
+  "viewInConsole": "Voir dans la Console",
   "searchPlaceholder": "Rechercher un fichier...",
   "analyzeAllTooltip": "Analyser tous les fichiers avec Gemini",
   "analyzeAll": "Analyser tout",

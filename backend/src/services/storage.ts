@@ -6,20 +6,20 @@ import path from 'path';
 dotenv.config();
 
 const storage = new Storage();
-const bucketName = process.env.GCS_BUCKET_NAME || 'kb-studio-bucket';
-const bucket = storage.bucket(bucketName);
 const kbJsonFile = 'kb.ndjson';
 
-let lastReconcileTime = 0;
+const getBucket = (name: string) => storage.bucket(name);
+
+const lastReconcileTimes = new Map<string, number>();
 const RECONCILE_DEBOUNCE_MS = 5000;
 
-/** Strip the gs://bucket/ prefix to get the GCS object path */
+/** Strip the gs://any-bucket/ prefix to get the GCS object path */
 export const pathFromUri = (uri: string): string =>
-  uri.replace(`gs://${bucketName}/`, '');
+  uri.replace(/^gs:\/\/[^/]+\//, '');
 
 /** Look up a UUID in kb.ndjson and return the GCS file path */
-export const resolveFilePath = async (id: string): Promise<string> => {
-  const metadata = await getKbMetadata();
+export const resolveFilePath = async (bucketName: string, id: string): Promise<string> => {
+  const metadata = await getKbMetadata(bucketName);
   const entry = metadata.find(m => m.id === id);
   if (!entry) throw new Error(`No kb.ndjson entry found for id ${id}`);
   return pathFromUri(entry.content.uri);
@@ -41,8 +41,9 @@ export interface KbEntry {
 }
 
 // Ensure the bucket exists (for local testing mostly)
-export const initStorage = async () => {
+export const initStorage = async (bucketName: string) => {
   try {
+    const bucket = getBucket(bucketName);
     const [exists] = await bucket.exists();
     if (!exists) {
       console.log(`Bucket ${bucketName} does not exist. Please create it or set GCS_BUCKET_NAME.`);
@@ -52,7 +53,8 @@ export const initStorage = async () => {
   }
 };
 
-export const getFolders = async (): Promise<string[]> => {
+export const getFolders = async (bucketName: string): Promise<string[]> => {
+  const bucket = getBucket(bucketName);
   const [files] = await bucket.getFiles();
   const folders = new Set<string>();
   
@@ -70,17 +72,20 @@ export const getFolders = async (): Promise<string[]> => {
   return Array.from(folders).sort();
 };
 
-export const createFolder = async (folderPath: string) => {
+export const createFolder = async (bucketName: string, folderPath: string) => {
+  const bucket = getBucket(bucketName);
   const file = bucket.file(`${folderPath.endsWith('/') ? folderPath : folderPath + '/'}`);
   await file.save('');
   return { success: true };
 };
 
-async function reconcileKbMetadata(): Promise<void> {
+async function reconcileKbMetadata(bucketName: string): Promise<void> {
+  const bucket = getBucket(bucketName);
   const [kbExists] = await bucket.file(kbJsonFile).exists();
   const now = Date.now();
+  const lastReconcileTime = lastReconcileTimes.get(bucketName) || 0;
   if (kbExists && now - lastReconcileTime < RECONCILE_DEBOUNCE_MS) return;
-  lastReconcileTime = now;
+  lastReconcileTimes.set(bucketName, now);
 
   const [allFiles] = await bucket.getFiles();
   const bucketPaths = new Set(
@@ -89,7 +94,7 @@ async function reconcileKbMetadata(): Promise<void> {
       .map(f => f.name)
   );
 
-  const metadata = await getKbMetadata();
+  const metadata = await getKbMetadata(bucketName);
   const knownPaths = new Set(metadata.map(m => pathFromUri(m.content.uri)));
 
   // Detect orphan files (in bucket but not in kb.ndjson)
@@ -123,22 +128,23 @@ async function reconcileKbMetadata(): Promise<void> {
   const hasStale = filtered.length < metadata.length;
 
   if (hasNew || hasStale) {
-    await saveKbMetadata([...filtered, ...newEntries]);
+    await saveKbMetadata(bucketName, [...filtered, ...newEntries]);
   }
 }
 
-export const getFiles = async (folderId?: string): Promise<any[]> => {
-  await reconcileKbMetadata();
+export const getFiles = async (bucketName: string, folderId?: string): Promise<any[]> => {
+  await reconcileKbMetadata(bucketName);
 
+  const bucket = getBucket(bucketName);
   const options: any = {};
   if (folderId) {
     options.prefix = folderId.endsWith('/') ? folderId : folderId + '/';
   }
-  
+
   const [files] = await bucket.getFiles(options);
-  
+
   // Read kb.ndjson to merge metadata, keyed by GCS path
-  const metadata = await getKbMetadata();
+  const metadata = await getKbMetadata(bucketName);
   const metaMap = new Map(metadata.map(m => [pathFromUri(m.content.uri), m]));
 
   return files
@@ -157,7 +163,8 @@ export const getFiles = async (folderId?: string): Promise<any[]> => {
     });
 };
 
-export const checkFilesExist = async (fileNames: string[]): Promise<{name: string, id: string}[]> => {
+export const checkFilesExist = async (bucketName: string, fileNames: string[]): Promise<{name: string, id: string}[]> => {
+  const bucket = getBucket(bucketName);
   const [allFiles] = await bucket.getFiles();
   const existingPaths = allFiles
     .filter(f => !f.name.endsWith('/') && f.name !== kbJsonFile);
@@ -170,7 +177,7 @@ export const checkFilesExist = async (fileNames: string[]): Promise<{name: strin
   }
 
   // Read kb.ndjson to map path → UUID
-  const metadata = await getKbMetadata();
+  const metadata = await getKbMetadata(bucketName);
   const pathToId = new Map(metadata.map(m => [pathFromUri(m.content.uri), m.id]));
 
   return fileNames
@@ -181,8 +188,9 @@ export const checkFilesExist = async (fileNames: string[]): Promise<{name: strin
     });
 };
 
-export const uploadFile = async (file: Express.Multer.File, folderPath: string): Promise<string> => {
+export const uploadFile = async (bucketName: string, file: Express.Multer.File, folderPath: string): Promise<string> => {
   const destinationPath = folderPath ? `${folderPath.endsWith('/') ? folderPath : folderPath + '/'}${file.originalname}` : file.originalname;
+  const bucket = getBucket(bucketName);
   const gcsFile = bucket.file(destinationPath);
   
   await gcsFile.save(file.buffer, {
@@ -194,7 +202,8 @@ export const uploadFile = async (file: Express.Multer.File, folderPath: string):
   return destinationPath;
 };
 
-export const getFileStream = (filePath: string) => {
+export const getFileStream = (bucketName: string, filePath: string) => {
+  const bucket = getBucket(bucketName);
   const file = bucket.file(filePath);
   return {
     stream: file.createReadStream(),
@@ -203,54 +212,58 @@ export const getFileStream = (filePath: string) => {
   };
 };
 
-export const deleteFile = async (filePath: string) => {
+export const deleteFile = async (bucketName: string, filePath: string) => {
+  const bucket = getBucket(bucketName);
   await bucket.file(filePath).delete();
   // Remove kb.ndjson entry by matching path
-  const metadata = await getKbMetadata();
+  const metadata = await getKbMetadata(bucketName);
   const filtered = metadata.filter(m => pathFromUri(m.content.uri) !== filePath);
-  await saveKbMetadata(filtered);
+  await saveKbMetadata(bucketName, filtered);
 };
 
-export const renameFile = async (filePath: string, newName: string) => {
+export const renameFile = async (bucketName: string, filePath: string, newName: string) => {
+  const bucket = getBucket(bucketName);
   const folderPath = filePath.substring(0, filePath.lastIndexOf('/') + 1);
   const newFilePath = folderPath + newName;
 
   await bucket.file(filePath).move(newFilePath);
 
   // Update kb.ndjson — find by path, keep UUID stable
-  const metadata = await getKbMetadata();
+  const metadata = await getKbMetadata(bucketName);
   const entry = metadata.find(m => pathFromUri(m.content.uri) === filePath);
   if (entry) {
     entry.content.uri = `gs://${bucketName}/${newFilePath}`;
     entry.structData.title = newName;
-    await saveKbMetadata(metadata);
+    await saveKbMetadata(bucketName, metadata);
   }
   return newFilePath;
 };
 
-export const moveFile = async (filePath: string, newFolderPath: string) => {
+export const moveFile = async (bucketName: string, filePath: string, newFolderPath: string) => {
+  const bucket = getBucket(bucketName);
   const fileName = filePath.split('/').pop() || filePath;
   const newFilePath = newFolderPath ? `${newFolderPath.endsWith('/') ? newFolderPath : newFolderPath + '/'}${fileName}` : fileName;
 
   await bucket.file(filePath).move(newFilePath);
 
   // Update kb.ndjson — find by path, keep UUID stable
-  const metadata = await getKbMetadata();
+  const metadata = await getKbMetadata(bucketName);
   const entry = metadata.find(m => pathFromUri(m.content.uri) === filePath);
   if (entry) {
     entry.content.uri = `gs://${bucketName}/${newFilePath}`;
     entry.structData.folder = newFolderPath.replace(/\/+$/, '');
-    await saveKbMetadata(metadata);
+    await saveKbMetadata(bucketName, metadata);
   }
   return newFilePath;
 };
 
 // KB JSON Management
-export const getKbMetadata = async (): Promise<KbEntry[]> => {
+export const getKbMetadata = async (bucketName: string): Promise<KbEntry[]> => {
   try {
+    const bucket = getBucket(bucketName);
     const [exists] = await bucket.file(kbJsonFile).exists();
     if (!exists) return [];
-    
+
     const [content] = await bucket.file(kbJsonFile).download();
     const lines = content.toString().trim().split(/\\n|\n/);
     return lines.filter(line => line.trim() !== '').map(line => JSON.parse(line));
@@ -260,19 +273,20 @@ export const getKbMetadata = async (): Promise<KbEntry[]> => {
   }
 };
 
-const saveKbMetadata = async (metadata: KbEntry[]) => {
+const saveKbMetadata = async (bucketName: string, metadata: KbEntry[]) => {
+  const bucket = getBucket(bucketName);
   const ndjson = metadata.map(entry => JSON.stringify(entry)).join("\n") + "\n";
   await bucket.file(kbJsonFile).save(ndjson, {
     metadata: { contentType: 'application/x-ndjson' }
   });
 };
 
-export const appendKbEntry = async (entry: KbEntry) => {
-  await appendKbEntries([entry]);
+export const appendKbEntry = async (bucketName: string, entry: KbEntry) => {
+  await appendKbEntries(bucketName, [entry]);
 };
 
-export const appendKbEntries = async (entries: KbEntry[]) => {
-  const metadata = await getKbMetadata();
+export const appendKbEntries = async (bucketName: string, entries: KbEntry[]) => {
+  const metadata = await getKbMetadata(bucketName);
   for (const entry of entries) {
     const existingIdx = metadata.findIndex(m => m.id === entry.id);
     if (existingIdx > -1) {
@@ -281,40 +295,41 @@ export const appendKbEntries = async (entries: KbEntry[]) => {
       metadata.push(entry);
     }
   }
-  await saveKbMetadata(metadata);
+  await saveKbMetadata(bucketName, metadata);
 };
 
-export const removeKbEntry = async (id: string) => {
-  const metadata = await getKbMetadata();
+export const removeKbEntry = async (bucketName: string, id: string) => {
+  const metadata = await getKbMetadata(bucketName);
   const filtered = metadata.filter(m => m.id !== id);
-  await saveKbMetadata(filtered);
+  await saveKbMetadata(bucketName, filtered);
 };
 
-export const updateKbEntry = async (id: string, updates: Partial<KbEntry['structData']>) => {
-  const metadata = await getKbMetadata();
+export const updateKbEntry = async (bucketName: string, id: string, updates: Partial<KbEntry['structData']>) => {
+  const metadata = await getKbMetadata(bucketName);
   const entry = metadata.find(m => m.id === id);
   if (entry) {
     entry.structData = { ...entry.structData, ...updates };
-    await saveKbMetadata(metadata);
+    await saveKbMetadata(bucketName, metadata);
   }
   return entry;
 };
 
-export const bulkUpdateKbEntries = async (updates: Map<string, Partial<KbEntry['structData']>>) => {
-  const metadata = await getKbMetadata();
+export const bulkUpdateKbEntries = async (bucketName: string, updates: Map<string, Partial<KbEntry['structData']>>) => {
+  const metadata = await getKbMetadata(bucketName);
   for (const entry of metadata) {
     const upd = updates.get(entry.id);
     if (upd) {
       entry.structData = { ...entry.structData, ...upd };
     }
   }
-  await saveKbMetadata(metadata);
+  await saveKbMetadata(bucketName, metadata);
 };
 
-export const renameFolder = async (oldPath: string, newPath: string) => {
+export const renameFolder = async (bucketName: string, oldPath: string, newPath: string) => {
   const oldPrefix = oldPath.endsWith('/') ? oldPath : oldPath + '/';
   const newPrefix = newPath.endsWith('/') ? newPath : newPath + '/';
 
+  const bucket = getBucket(bucketName);
   const [files] = await bucket.getFiles({ prefix: oldPrefix });
 
   for (const file of files) {
@@ -323,7 +338,7 @@ export const renameFolder = async (oldPath: string, newPath: string) => {
   }
 
   // Update kb.ndjson entries — match by path prefix, keep UUIDs stable
-  const metadata = await getKbMetadata();
+  const metadata = await getKbMetadata(bucketName);
   let changed = false;
   for (const entry of metadata) {
     const entryPath = pathFromUri(entry.content.uri);
@@ -336,11 +351,12 @@ export const renameFolder = async (oldPath: string, newPath: string) => {
     }
   }
   if (changed) {
-    await saveKbMetadata(metadata);
+    await saveKbMetadata(bucketName, metadata);
   }
 };
 
-export const deleteFolder = async (folderPath: string) => {
+export const deleteFolder = async (bucketName: string, folderPath: string) => {
+  const bucket = getBucket(bucketName);
   const prefix = folderPath.endsWith('/') ? folderPath : folderPath + '/';
   const [files] = await bucket.getFiles({ prefix });
 
@@ -354,9 +370,9 @@ export const deleteFolder = async (folderPath: string) => {
   }
 
   if (pathsToRemove.size > 0) {
-    const metadata = await getKbMetadata();
+    const metadata = await getKbMetadata(bucketName);
     const filtered = metadata.filter(m => !pathsToRemove.has(pathFromUri(m.content.uri)));
-    await saveKbMetadata(filtered);
+    await saveKbMetadata(bucketName, filtered);
   }
 };
 
@@ -394,7 +410,8 @@ export function extractValueDate(filename: string): string {
   return '';
 }
 
-export const deleteAllFiles = async () => {
+export const deleteAllFiles = async (bucketName: string) => {
+  const bucket = getBucket(bucketName);
   const [files] = await bucket.getFiles();
 
   for (const file of files) {
@@ -404,5 +421,5 @@ export const deleteAllFiles = async () => {
   }
 
   // Clear kb.ndjson
-  await saveKbMetadata([]);
+  await saveKbMetadata(bucketName, []);
 };

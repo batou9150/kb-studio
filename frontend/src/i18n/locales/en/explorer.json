@@ -3,7 +3,7 @@
   "newFolder": "New Folder",
   "newFolderPrompt": "New folder name:",
   "root": "Root",
-  "openGcsConsole": "Open in GCS console",
+  "viewInConsole": "View in Console",
   "searchPlaceholder": "Search files...",
   "analyzeAllTooltip": "Analyze all files with Gemini",
   "analyzeAll": "Analyze all",

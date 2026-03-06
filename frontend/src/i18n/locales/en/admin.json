@@ -1,5 +1,7 @@
 {
   "folderManagement": "Folder Management",
+  "folderManagementFor": "Folder Management for",
+  "viewInConsole": "View in Console",
   "newFolder": "New folder",
   "newFolderPrompt": "New folder name:",
   "renameFolderPrompt": "New folder name:",
@@ -24,8 +26,8 @@
   "colError": "Error",
   "dangerZone": "Danger Zone",
   "dangerZoneDesc": "Permanently delete all files and metadata from the knowledge base.",
-  "confirmDeleteAll": "Delete ALL files from the knowledge base?",
-  "confirmDeleteAllIrreversible": "This action is irreversible. Confirm deletion?",
+  "confirmDeleteAll": "Delete ALL files from the knowledge base {{bucket}}?",
+  "confirmDeleteAllIrreversible": "This action is irreversible. Confirm deletion of all files in {{bucket}}?",
   "deletingAll": "Deleting...",
   "deleteAll": "Delete all files"
 }

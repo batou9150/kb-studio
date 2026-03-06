@@ -7,8 +7,6 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const MODEL = 'gemini-3.1-flash-lite-preview';
 
 const storage = new Storage();
-const bucketName = process.env.GCS_BUCKET_NAME || 'kb-studio-bucket';
-const bucket = storage.bucket(bucketName);
 
 const ANALYSIS_PROMPT = `Analyze this document and return ONLY a JSON object with:
 - "description": short description (1-2 sentences, in French)
@@ -34,9 +32,9 @@ const ANALYSIS_PROMPT = `Analyze this document and return ONLY a JSON object wit
 
 Return ONLY valid JSON, no markdown, no explanation.`;
 
-async function downloadFileAsBuffer(entry: KbEntry): Promise<Buffer> {
+async function downloadFileAsBuffer(bucketName: string, entry: KbEntry): Promise<Buffer> {
   const filePath = pathFromUri(entry.content.uri);
-  const [content] = await bucket.file(filePath).download();
+  const [content] = await storage.bucket(bucketName).file(filePath).download();
   return content;
 }
 
@@ -51,8 +49,8 @@ function parseAnalysisResponse(text: string): { description: string; value_date:
   };
 }
 
-export async function analyzeFile(entry: KbEntry): Promise<{ description: string; value_date: string; category: string }> {
-  const buffer = await downloadFileAsBuffer(entry);
+export async function analyzeFile(bucketName: string, entry: KbEntry): Promise<{ description: string; value_date: string; category: string }> {
+  const buffer = await downloadFileAsBuffer(bucketName, entry);
   const base64Data = buffer.toString('base64');
 
   const response = await ai.models.generateContent({
@@ -72,15 +70,15 @@ export async function analyzeFile(entry: KbEntry): Promise<{ description: string
   return parseAnalysisResponse(text);
 }
 
-export async function startBatchAnalysis(): Promise<{ batchName: string; totalFiles: number }> {
-  const entries = await getKbMetadata();
+export async function startBatchAnalysis(bucketName: string): Promise<{ batchName: string; totalFiles: number }> {
+  const entries = await getKbMetadata(bucketName);
   if (entries.length === 0) {
     throw new Error('No files to analyze');
   }
 
   const inlineRequests = [];
   for (const entry of entries) {
-    const buffer = await downloadFileAsBuffer(entry);
+    const buffer = await downloadFileAsBuffer(bucketName, entry);
     const base64Data = buffer.toString('base64');
 
     inlineRequests.push({
@@ -201,7 +199,7 @@ export async function getBatchAnalysisDetails(batchName: string): Promise<{
   return { results, failed };
 }
 
-export async function getBatchAnalysisStatus(batchName: string): Promise<{
+export async function getBatchAnalysisStatus(bucketName: string, batchName: string): Promise<{
   state: string;
   succeededCount?: number;
   failedCount?: number;
@@ -243,7 +241,7 @@ export async function getBatchAnalysisStatus(batchName: string): Promise<{
 
     // Single write for all successful updates
     if (bulkUpdates.size > 0) {
-      await bulkUpdateKbEntries(bulkUpdates);
+      await bulkUpdateKbEntries(bucketName, bulkUpdates);
     }
 
     return { state: 'succeeded', results, failed };

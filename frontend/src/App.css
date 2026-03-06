@@ -201,6 +201,18 @@ body {
   text-overflow: ellipsis;
 }
 
+.bucket-select {
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 4px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  cursor: pointer;
+  max-width: 250px;
+}
+
 .explorer-toolbar-center {
   display: flex;
   justify-content: center;

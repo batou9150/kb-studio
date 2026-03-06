@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import path from 'path';
 import multer from 'multer';
@@ -42,14 +42,30 @@ app.use((req, res, next) => {
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-initStorage();
+// Parse comma-separated bucket names
+const bucketNames = (process.env.GCS_BUCKET_NAME || 'kb-studio-bucket')
+  .split(',').map(s => s.trim()).filter(Boolean);
+const allowedBuckets = new Set(bucketNames);
 
-const requireBucketName = process.env.GCS_BUCKET_NAME || 'kb-studio-bucket';
+// Init storage for all buckets
+for (const b of bucketNames) {
+  initStorage(b);
+}
+
+function resolveBucket(req: Request, res: Response): string | null {
+  const bucket = (req.query.bucket as string) || bucketNames[0];
+  if (!allowedBuckets.has(bucket)) {
+    res.status(400).json({ error: `Invalid bucket: ${bucket}` });
+    return null;
+  }
+  return bucket;
+}
 
 // GET /api/config
 app.get('/api/config', (_req, res) => {
   res.json({
-    bucketName: requireBucketName,
+    bucketName: bucketNames[0],
+    bucketNames,
     projectId: process.env.GOOGLE_CLOUD_PROJECT || '',
     appName: process.env.APP_NAME || 'KB-Studio',
     appLogo: process.env.APP_LOGO || '',
@@ -58,8 +74,10 @@ app.get('/api/config', (_req, res) => {
 
 // GET /api/folders
 app.get('/api/folders', async (req, res) => {
+  const bucket = resolveBucket(req, res);
+  if (!bucket) return;
   try {
-    const folders = await getFolders();
+    const folders = await getFolders(bucket);
     res.json(folders);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -68,10 +86,12 @@ app.get('/api/folders', async (req, res) => {
 
 // POST /api/folders
 app.post('/api/folders', async (req, res) => {
+  const bucket = resolveBucket(req, res);
+  if (!bucket) return;
   try {
     const { path } = req.body;
     if (!path) return res.status(400).json({ error: 'path is required' });
-    await createFolder(path);
+    await createFolder(bucket, path);
     res.json({ success: true, path });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -80,10 +100,12 @@ app.post('/api/folders', async (req, res) => {
 
 // GET /api/files
 app.get('/api/files', async (req, res) => {
+  const bucket = resolveBucket(req, res);
+  if (!bucket) return;
   try {
     const { folderId, search } = req.query;
-    let files = await getFiles(folderId as string);
-    
+    let files = await getFiles(bucket, folderId as string);
+
     if (search) {
       files = files.filter(f => f.name.toLowerCase().includes((search as string).toLowerCase()));
     }
@@ -95,12 +117,14 @@ app.get('/api/files', async (req, res) => {
 
 // POST /api/files/check-duplicates
 app.post('/api/files/check-duplicates', async (req, res) => {
+  const bucket = resolveBucket(req, res);
+  if (!bucket) return;
   try {
     const { fileNames } = req.body;
     if (!fileNames || !Array.isArray(fileNames)) {
       return res.status(400).json({ error: 'fileNames array is required' });
     }
-    const duplicates = await checkFilesExist(fileNames);
+    const duplicates = await checkFilesExist(bucket, fileNames);
     res.json({ duplicates });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -109,6 +133,8 @@ app.post('/api/files/check-duplicates', async (req, res) => {
 
 // POST /api/files
 app.post('/api/files', upload.array('files'), async (req, res) => {
+  const bucket = resolveBucket(req, res);
+  if (!bucket) return;
   try {
     const baseFolderPath = req.body.folderId || '';
     const files = req.files as Express.Multer.File[];
@@ -132,7 +158,7 @@ app.post('/api/files', upload.array('files'), async (req, res) => {
           : relDir;
       }
 
-      const filePath = await uploadFile(file, folderPath);
+      const filePath = await uploadFile(bucket, file, folderPath);
 
       const id = uuidv4();
       kbEntries.push({
@@ -146,14 +172,14 @@ app.post('/api/files', upload.array('files'), async (req, res) => {
         },
         content: {
           mimeType: file.mimetype,
-          uri: `gs://${requireBucketName}/${filePath}`,
+          uri: `gs://${bucket}/${filePath}`,
         }
       });
 
       results.push({ id, name: file.originalname, path: filePath });
     }
 
-    await appendKbEntries(kbEntries);
+    await appendKbEntries(bucket, kbEntries);
     res.json(results);
   } catch (err: any) {
     console.error(err);
@@ -163,16 +189,18 @@ app.post('/api/files', upload.array('files'), async (req, res) => {
 
 // PUT /api/files/:id
 app.put('/api/files/:id', upload.single('file'), async (req, res) => {
+  const bucket = resolveBucket(req, res);
+  if (!bucket) return;
   try {
     const id = req.params.id as string;
     const file = req.file;
     if (!file) return res.status(400).json({ error: 'No file provided' });
 
     file.originalname = Buffer.from(file.originalname, 'latin1').toString('utf-8').normalize('NFC');
-    const resolvedPath = await resolveFilePath(id);
+    const resolvedPath = await resolveFilePath(bucket, id);
     const folderPath = resolvedPath.substring(0, resolvedPath.lastIndexOf('/')) || '';
 
-    const filePath = await uploadFile(file, folderPath);
+    const filePath = await uploadFile(bucket, file, folderPath);
 
     res.json({ id, path: filePath });
   } catch (err: any) {
@@ -182,11 +210,13 @@ app.put('/api/files/:id', upload.single('file'), async (req, res) => {
 
 // PATCH /api/files/:id
 app.patch('/api/files/:id', async (req, res) => {
+  const bucket = resolveBucket(req, res);
+  if (!bucket) return;
   try {
     const { description, value_date, category } = req.body;
     const id = req.params.id as string;
 
-    const updated = await updateKbEntry(id, { description, value_date, category });
+    const updated = await updateKbEntry(bucket, id, { description, value_date, category });
     res.json(updated);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -195,10 +225,12 @@ app.patch('/api/files/:id', async (req, res) => {
 
 // DELETE /api/files/:id
 app.delete('/api/files/:id', async (req, res) => {
+  const bucket = resolveBucket(req, res);
+  if (!bucket) return;
   try {
     const id = req.params.id as string;
-    const filePath = await resolveFilePath(id);
-    await deleteFile(filePath);
+    const filePath = await resolveFilePath(bucket, id);
+    await deleteFile(bucket, filePath);
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -207,12 +239,14 @@ app.delete('/api/files/:id', async (req, res) => {
 
 // GET /api/files/:id/preview
 app.get('/api/files/:id/preview', async (req, res) => {
+  const bucket = resolveBucket(req, res);
+  if (!bucket) return;
   try {
     const id = req.params.id as string;
-    const filePath = await resolveFilePath(id);
+    const filePath = await resolveFilePath(bucket, id);
     const fileName = filePath.split('/').pop() || filePath;
 
-    const { stream, getMetadata } = getFileStream(filePath);
+    const { stream, getMetadata } = getFileStream(bucket, filePath);
     const [metadata] = await getMetadata();
 
     res.setHeader('Content-Type', metadata.contentType || 'application/octet-stream');
@@ -234,12 +268,14 @@ app.get('/api/files/:id/preview', async (req, res) => {
 
 // GET /api/files/:id/download
 app.get('/api/files/:id/download', async (req, res) => {
+  const bucket = resolveBucket(req, res);
+  if (!bucket) return;
   try {
     const id = req.params.id as string;
-    const filePath = await resolveFilePath(id);
+    const filePath = await resolveFilePath(bucket, id);
     const fileName = filePath.split('/').pop() || filePath;
 
-    const { stream, getMetadata } = getFileStream(filePath);
+    const { stream, getMetadata } = getFileStream(bucket, filePath);
     const [metadata] = await getMetadata();
 
     res.setHeader('Content-Type', metadata.contentType || 'application/octet-stream');
@@ -261,12 +297,14 @@ app.get('/api/files/:id/download', async (req, res) => {
 
 // PUT /api/files/:id/rename
 app.put('/api/files/:id/rename', async (req, res) => {
+  const bucket = resolveBucket(req, res);
+  if (!bucket) return;
   try {
     const id = req.params.id as string;
     const { newName } = req.body;
     if (!newName) return res.status(400).json({ error: 'newName is required' });
-    const filePath = await resolveFilePath(id);
-    const newPath = await renameFile(filePath, newName);
+    const filePath = await resolveFilePath(bucket, id);
+    const newPath = await renameFile(bucket, filePath, newName);
     res.json({ success: true, newPath });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -275,12 +313,14 @@ app.put('/api/files/:id/rename', async (req, res) => {
 
 // PUT /api/files/:id/move
 app.put('/api/files/:id/move', async (req, res) => {
+  const bucket = resolveBucket(req, res);
+  if (!bucket) return;
   try {
     const id = req.params.id as string;
     const { newFolderId } = req.body;
-    const filePath = await resolveFilePath(id);
+    const filePath = await resolveFilePath(bucket, id);
 
-    const newPath = await moveFile(filePath, newFolderId);
+    const newPath = await moveFile(bucket, filePath, newFolderId);
     res.json({ success: true, newPath });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -289,12 +329,14 @@ app.put('/api/files/:id/move', async (req, res) => {
 
 // PUT /api/folders/:id
 app.put('/api/folders/:id', async (req, res) => {
+  const bucket = resolveBucket(req, res);
+  if (!bucket) return;
   try {
     const id = req.params.id as string;
     const { newName } = req.body;
     if (!newName) return res.status(400).json({ error: 'newName is required' });
     const oldPath = decodeURIComponent(id);
-    await renameFolder(oldPath, newName);
+    await renameFolder(bucket, oldPath, newName);
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -303,10 +345,12 @@ app.put('/api/folders/:id', async (req, res) => {
 
 // DELETE /api/folders/:id
 app.delete('/api/folders/:id', async (req, res) => {
+  const bucket = resolveBucket(req, res);
+  if (!bucket) return;
   try {
     const id = req.params.id as string;
     const folderPath = decodeURIComponent(id);
-    await deleteFolder(folderPath);
+    await deleteFolder(bucket, folderPath);
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -315,8 +359,10 @@ app.delete('/api/folders/:id', async (req, res) => {
 
 // DELETE /api/files (delete all files)
 app.delete('/api/files', async (req, res) => {
+  const bucket = resolveBucket(req, res);
+  if (!bucket) return;
   try {
-    await deleteAllFiles();
+    await deleteAllFiles(bucket);
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -327,8 +373,10 @@ app.delete('/api/files', async (req, res) => {
 
 // POST /api/files/analyze-all — Start batch analysis (must be before :id route)
 app.post('/api/files/analyze-all', async (req, res) => {
+  const bucket = resolveBucket(req, res);
+  if (!bucket) return;
   try {
-    const result = await startBatchAnalysis();
+    const result = await startBatchAnalysis(bucket);
     res.json(result);
   } catch (err: any) {
     console.error('Batch analysis error:', err);
@@ -361,11 +409,13 @@ app.get('/api/files/analyze-all/:batchName/details', async (req, res) => {
 
 // GET /api/files/analyze-all/status — Poll batch status
 app.get('/api/files/analyze-all/status', async (req, res) => {
+  const bucket = resolveBucket(req, res);
+  if (!bucket) return;
   try {
     const batchName = req.query.batchName as string;
     if (!batchName) return res.status(400).json({ error: 'batchName query parameter is required' });
 
-    const result = await getBatchAnalysisStatus(batchName);
+    const result = await getBatchAnalysisStatus(bucket, batchName);
     res.json(result);
   } catch (err: any) {
     console.error('Batch status error:', err);
@@ -375,14 +425,16 @@ app.get('/api/files/analyze-all/status', async (req, res) => {
 
 // POST /api/files/:id/analyze — Single file analysis
 app.post('/api/files/:id/analyze', async (req, res) => {
+  const bucket = resolveBucket(req, res);
+  if (!bucket) return;
   try {
     const id = req.params.id as string;
-    const metadata = await getKbMetadata();
+    const metadata = await getKbMetadata(bucket);
     const entry = metadata.find(m => m.id === id);
     if (!entry) return res.status(404).json({ error: 'File not found in kb.ndjson' });
 
-    const result = await analyzeFile(entry);
-    await updateKbEntry(id, result);
+    const result = await analyzeFile(bucket, entry);
+    await updateKbEntry(bucket, id, result);
     res.json(result);
   } catch (err: any) {
     console.error('Analyze file error:', err);
@@ -404,10 +456,12 @@ app.get('/api/search/datastores', async (req, res) => {
 
 // POST /api/search/datastores — Create datastore
 app.post('/api/search/datastores', async (req, res) => {
+  const bucket = resolveBucket(req, res);
+  if (!bucket) return;
   try {
     const { dataStoreId, displayName, location = 'global', documentProcessingConfig, appConfig } = req.body;
     if (!dataStoreId || !displayName) return res.status(400).json({ error: 'dataStoreId and displayName are required' });
-    const result = await searchCreateDataStore(dataStoreId, displayName, location, documentProcessingConfig, appConfig);
+    const result = await searchCreateDataStore(bucket, dataStoreId, displayName, location, documentProcessingConfig, appConfig);
     res.json(result);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -416,10 +470,12 @@ app.post('/api/search/datastores', async (req, res) => {
 
 // POST /api/search/datastores/:id/import — Start async import
 app.post('/api/search/datastores/:id/import', async (req, res) => {
+  const bucket = resolveBucket(req, res);
+  if (!bucket) return;
   try {
     const dataStoreId = req.params.id as string;
     const { location = 'global', mode = 'INCREMENTAL' } = req.body;
-    const result = await searchStartImport(dataStoreId, location, mode);
+    const result = await searchStartImport(bucket, dataStoreId, location, mode);
     res.json(result);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -453,10 +509,12 @@ app.get('/api/search/datastores/:id/imports', async (req, res) => {
 
 // GET /api/search/datastores/:id/status — Get status
 app.get('/api/search/datastores/:id/status', async (req, res) => {
+  const bucket = resolveBucket(req, res);
+  if (!bucket) return;
   try {
     const dataStoreId = req.params.id as string;
     const location = (req.query.location as string) || 'global';
-    const status = await searchGetDataStoreStatus(dataStoreId, location);
+    const status = await searchGetDataStoreStatus(bucket, dataStoreId, location);
     res.json(status);
   } catch (err: any) {
     res.status(500).json({ error: err.message });

@@ -2,7 +2,6 @@ import { v1beta, protos } from '@google-cloud/discoveryengine';
 import { Storage } from '@google-cloud/storage';
 
 const projectId = process.env.GOOGLE_CLOUD_PROJECT!;
-const bucketName = process.env.GCS_BUCKET_NAME || 'kb-studio-bucket';
 const storage = new Storage();
 
 function apiEndpoint(location: string): string | undefined {
@@ -129,6 +128,7 @@ export async function listDataStores() {
 }
 
 export async function createDataStore(
+  bucketName: string,
   dataStoreId: string,
   displayName: string,
   location: string,
@@ -178,7 +178,7 @@ export async function createDataStore(
 
   // Trigger a full import so the datastore is immediately populated
   try {
-    await startImport(dataStoreId, location, 'FULL');
+    await startImport(bucketName, dataStoreId, location, 'FULL');
   } catch (err: any) {
     console.error('Failed to trigger initial import:', err.message);
   }
@@ -186,7 +186,7 @@ export async function createDataStore(
   return dataStore;
 }
 
-export async function startImport(dataStoreId: string, location: string, mode: 'FULL' | 'INCREMENTAL' = 'INCREMENTAL') {
+export async function startImport(bucketName: string, dataStoreId: string, location: string, mode: 'FULL' | 'INCREMENTAL' = 'INCREMENTAL') {
   const parent = branchPath(dataStoreId, location);
   const [operation] = await getDocumentClient(location).importDocuments({
     parent,
@@ -272,7 +272,7 @@ export async function listImportOperations(dataStoreId: string, location: string
   return operations;
 }
 
-export async function getDataStoreStatus(dataStoreId: string, location: string) {
+export async function getDataStoreStatus(bucketName: string, dataStoreId: string, location: string) {
   // Get datastore info
   const name = dataStorePath(dataStoreId, location);
   try {
@@ -296,6 +296,7 @@ export async function getDataStoreStatus(dataStoreId: string, location: string) 
 
   // Read kb.ndjson metadata from GCS
   const file = storage.bucket(bucketName).file('kb.ndjson');
+
   const [exists] = await file.exists();
   let kbEntryCount = 0;
   let kbNdjsonUpdatedAt: string | null = null;

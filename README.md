@@ -71,7 +71,7 @@ Edit `backend/.env`:
 | Variable | Description | Default |
 |---|---|---|
 | `PORT` | Server port | `8080` |
-| `GCS_BUCKET_NAME` | Google Cloud Storage bucket name | — |
+| `GCS_BUCKET_NAME` | GCS bucket name(s), comma-separated for multi-bucket | — |
 | `GOOGLE_CLOUD_PROJECT` | Google Cloud project ID | — |
 | `GEMINI_API_KEY` | Gemini API key | — |
 | `APP_NAME` | Custom application name (optional) | `KB-Studio` |
@@ -125,7 +125,7 @@ The application is accessible at `http://localhost:8080`.
 
 | Variable | Description | Default |
 |---|---|---|
-| `GCS_BUCKET_NAME` | Google Cloud Storage bucket name | `kb-studio-bucket` |
+| `GCS_BUCKET_NAME` | GCS bucket name(s), comma-separated for multi-bucket | `kb-studio-bucket` |
 | `GOOGLE_CLOUD_PROJECT` | Google Cloud project ID | — |
 | `GEMINI_API_KEY` | Gemini API key | — |
 | `APP_NAME` | Custom application name | `KB-Studio` |

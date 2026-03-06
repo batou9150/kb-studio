@@ -1,5 +1,6 @@
 {
   "datastore": "Datastore",
+  "datastoreFor": "Datastore pour",
   "selectDatastore": "Sélectionner un datastore...",
   "createNew": "+ Créer un nouveau datastore",
   "viewInConsole": "Voir dans la Console",
