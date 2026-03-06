@@ -14,7 +14,7 @@ interface ExplorerProps {
   onRenameFile: (id: string, newName: string) => void;
   onSearch: (query: string) => void;
   onAnalyzeAll: () => void;
-  analyzeProgress: { done: number; total: number } | null;
+  analyzeProgress: { state: 'preparing' } | { state: 'starting' } | { state: 'running'; done: number; total: number } | null;
 }
 
 export const Explorer: React.FC<ExplorerProps> = ({ 
@@ -74,7 +74,10 @@ export const Explorer: React.FC<ExplorerProps> = ({
             title="Analyser tous les fichiers avec Gemini"
           >
             {analyzeProgress ? <Loader size={16} className="spinner" /> : <Sparkles size={16} />}
-            {analyzeProgress ? `Analyse... ${analyzeProgress.done}/${analyzeProgress.total}` : 'Analyser tout'}
+            {analyzeProgress?.state === 'preparing' ? 'Préparation de l\'analyse...'
+              : analyzeProgress?.state === 'starting' ? 'Analyse en cours...'
+              : analyzeProgress?.state === 'running' ? `Analyse... ${analyzeProgress.done}/${analyzeProgress.total}`
+              : 'Analyser tout'}
           </button>
           <div className="upload-dropdown">
             <button className="btn btn-outline" onClick={() => setUploadMenuOpen(!uploadMenuOpen)}>

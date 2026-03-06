@@ -9,7 +9,7 @@ import {
   extractValueDate, resolveFilePath
 } from './services/storage';
 import type { KbEntry } from './services/storage';
-import { analyzeFile, startBatchAnalysis, getBatchAnalysisStatus } from './services/gemini';
+import { analyzeFile, startBatchAnalysis, getBatchAnalysisStatus, listBatches, getBatchAnalysisDetails } from './services/gemini';
 import {
   listDataStores as searchListDataStores,
   createDataStore as searchCreateDataStore,
@@ -320,6 +320,29 @@ app.post('/api/files/analyze-all', async (req, res) => {
     res.json(result);
   } catch (err: any) {
     console.error('Batch analysis error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/files/analyze-all/history — List past batches
+app.get('/api/files/analyze-all/history', async (req, res) => {
+  try {
+    const batches = await listBatches();
+    res.json(batches);
+  } catch (err: any) {
+    console.error('List batches error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/files/analyze-all/:batchName/details — Get batch details (read-only)
+app.get('/api/files/analyze-all/:batchName/details', async (req, res) => {
+  try {
+    const batchName = req.params.batchName as string;
+    const result = await getBatchAnalysisDetails(batchName);
+    res.json(result);
+  } catch (err: any) {
+    console.error('Batch details error:', err);
     res.status(500).json({ error: err.message });
   }
 });
