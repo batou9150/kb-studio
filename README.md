@@ -1,37 +1,55 @@
 # KB-Studio
 
-KB-Studio is a web application designed to allow non-technical users to manage a knowledge base that will be used for a RAG (Retrieval-Augmented Generation) system within AI conversational agents. 
+KB-Studio is a web application designed to allow non-technical users to manage a knowledge base for RAG (Retrieval-Augmented Generation) systems within AI conversational agents.
 
 **Tagline:** Pilotez votre base de connaissances
 
-## 🚀 Features
+## Features
 
-*   **File Management:** Upload, update, delete, and download documents (PDFs, text files, images, etc.).
-*   **Folder Organization:** Create, rename, delete, and navigate through a virtual folder hierarchy.
-*   **AI-Powered Metadata Extraction:** Automatically analyzes uploaded files using **Google Gemini 1.5 Pro (gemini-3-pro-preview)** to:
-    *   Extract a value date ("date de valeur") from the content or filename.
-    *   Generate a short, concise description of the document.
-*   **Metadata Editing:** Manually review and edit the AI-generated metadata if needed.
-*   **Drag & Drop Interface:** Easily upload files by dragging and dropping them into the explorer view.
-*   **Vertex AI Search Ready:** Maintains a `kb.ndjson` file at the root of the Cloud Storage bucket, adhering to the structure expected by Vertex AI Search for unstructured data with metadata.
+### Knowledge Base Management
+- **File Management:** Upload, update, rename, delete, and download documents (PDFs, text files, images, etc.)
+- **Folder Organization:** Create, rename, delete, and navigate through a virtual folder hierarchy
+- **Drag & Drop:** Upload files by dragging them into the explorer, or move files between folders
+- **Duplicate Detection:** Pre-upload checks with options to overwrite or skip existing files
+- **Search:** Full-text search across file names
 
-## 🛠️ Technical Architecture
+### AI-Powered Metadata Extraction
+- **Single File Analysis:** Analyze individual documents on demand
+- **Batch Analysis:** Process all documents at once using the Gemini Batch API
+- **Extracted Metadata:**
+  - **Description** — 1-2 sentence summary of the document
+  - **Value Date** — Relevant date extracted from content or filename (YYYY-MM-DD)
+  - **Category** — Classification into one of 17 predefined categories (FAQ, how-to, manual, contract, etc.)
+- **Manual Editing:** Review and edit AI-generated metadata at any time
+- **Analysis History:** View past batch analysis results with drill-down details
 
-*   **Frontend:** React (TypeScript) built with Vite. UI styled with Vanilla CSS for a clean, modern look.
-*   **Backend:** Node.js & Express (TypeScript) serving a REST API.
-*   **Storage:** Google Cloud Storage (Bucket used for documents and the `kb.ndjson` metadata file).
-*   **AI Integration:** Google GenAI SDK (`@google/genai`) using the `gemini-3-pro-preview` model.
+### Vertex AI Search Integration
+- **Datastore Management:** Create and manage Vertex AI Search datastores
+- **Document Indexing:** Import documents from the knowledge base into datastores
+- **Search & Answer:** Query indexed documents with optional LLM-powered answer generation
+- **Multi-Region Support:** Manage datastores across global, EU, and US locations
+- **Processing Options:** Digital, OCR, or Layout parsing modes with configurable chunking
 
-## 📋 Prerequisites
+### White-Label Support
+- Customize the application name and logo via environment variables (`VITE_APP_NAME`, `VITE_APP_LOGO`)
 
-Before running this project, ensure you have:
+## Technical Architecture
 
-*   [Node.js](https://nodejs.org/) (v18 or higher recommended)
-*   A Google Cloud Project with Billing enabled.
-*   A Google Cloud Storage bucket created.
-*   A Gemini API Key (available via Google AI Studio).
+- **Frontend:** React 19 (TypeScript) built with Vite, styled with vanilla CSS
+- **Backend:** Node.js with Express 5 (TypeScript) serving a REST API
+- **Storage:** Google Cloud Storage for documents and `kb.ndjson` metadata
+- **AI:** Google GenAI SDK (`@google/genai`) using Gemini 3.1 Flash Lite Preview
+- **Search:** Vertex AI Search (Discovery Engine) for document indexing and retrieval
 
-## ⚙️ Installation & Setup
+## Prerequisites
+
+- [Node.js](https://nodejs.org/) v18 or higher
+- A Google Cloud Project with billing enabled
+- A Google Cloud Storage bucket
+- A Gemini API Key (from [Google AI Studio](https://aistudio.google.com/))
+- Google Cloud authentication configured (`gcloud auth application-default login`)
+
+## Installation & Setup
 
 ### 1. Clone the repository
 
@@ -40,83 +58,127 @@ git clone <repository-url>
 cd kb-studio
 ```
 
-### 2. Backend Setup
-
-Navigate to the backend directory and install dependencies:
+### 2. Backend
 
 ```bash
 cd backend
 npm install
-```
-
-Copy the example environment file and configure your variables:
-
-```bash
 cp .env.example .env
 ```
 
-Edit `backend/.env` with your specific details:
-*   `PORT=8080` (Optional, defaults to 8080)
-*   `GCS_BUCKET_NAME=your-cloud-storage-bucket-name`
-*   `GOOGLE_CLOUD_PROJECT=your-google-cloud-project-id`
-*   `GEMINI_API_KEY=your-gemini-api-key`
+Edit `backend/.env`:
 
-**Note on Google Cloud Authentication:**
-Ensure that your local environment is authenticated with Google Cloud to access the storage bucket. You can do this by running `gcloud auth application-default login` or by exporting the `GOOGLE_APPLICATION_CREDENTIALS` environment variable pointing to your service account JSON key file.
-
-Start the backend development server:
+| Variable | Description | Default |
+|---|---|---|
+| `PORT` | Server port | `8080` |
+| `GCS_BUCKET_NAME` | Google Cloud Storage bucket name | — |
+| `GOOGLE_CLOUD_PROJECT` | Google Cloud project ID | — |
+| `GEMINI_API_KEY` | Gemini API key | — |
 
 ```bash
 npm run dev
 ```
 
-### 3. Frontend Setup
+### 3. Frontend
 
-In a new terminal, navigate to the frontend directory and install dependencies:
+In a new terminal:
 
 ```bash
 cd frontend
 npm install
-```
-
-Copy the example environment file:
-
-```bash
 cp .env.example .env
 ```
 
-Ensure `frontend/.env` points to your backend API:
-*   `VITE_API_BASE_URL=http://localhost:8080/api`
+Edit `frontend/.env`:
 
-Start the frontend development server:
+| Variable | Description | Default |
+|---|---|---|
+| `VITE_API_BASE_URL` | Backend API URL | `http://localhost:8080/api` |
+| `VITE_APP_NAME` | Custom application name (optional) | `KB-Studio` |
+| `VITE_APP_LOGO` | Custom logo URL (optional) | — |
 
 ```bash
 npm run dev
 ```
 
-The application should now be running. The frontend is accessible at `http://localhost:5173`.
+The application is accessible at `http://localhost:5173`.
 
-## 📂 Project Structure
+## Project Structure
 
-*   `frontend/`: React single-page application.
-    *   `src/components/`: Reusable UI components (Header, Sidebar, Explorer, DetailsPanel).
-    *   `src/api/`: Axios client for communicating with the backend API.
-    *   `src/types/`: TypeScript interfaces shared across the frontend.
-*   `backend/`: Node.js Express server.
-    *   `src/server.ts`: Main Express application and API route definitions.
-    *   `src/services/storage.ts`: Google Cloud Storage integration and `kb.ndjson` management.
-    *   `src/services/ai.ts`: Google Gemini integration for document analysis.
+```
+kb-studio/
+├── frontend/                     # React SPA
+│   └── src/
+│       ├── components/           # UI components
+│       │   ├── App.tsx           # Main app, state management
+│       │   ├── Header.tsx        # Navigation with view tabs
+│       │   ├── Sidebar.tsx       # Folder tree navigation
+│       │   ├── Explorer.tsx      # File list with toolbar
+│       │   ├── DetailsPanel.tsx  # File preview & metadata editing
+│       │   ├── SearchPanel.tsx   # Datastore & indexing management
+│       │   ├── AnswerPanel.tsx   # Search & answer query interface
+│       │   └── AdminPanel.tsx    # Administration functions
+│       ├── api/                  # Axios HTTP client
+│       └── types/                # TypeScript interfaces
+├── backend/                      # Express API server
+│   └── src/
+│       ├── server.ts             # Express app & route definitions
+│       └── services/
+│           ├── storage.ts        # Google Cloud Storage integration
+│           ├── gemini.ts         # Gemini API for document analysis
+│           └── search.ts         # Vertex AI Search integration
+└── README.md
+```
 
-## 📄 API Endpoints
+## API Reference
 
-*   **Folders**
-    *   `GET /api/folders`: List all folders.
-    *   `POST /api/folders`: Create a new folder.
-*   **Files**
-    *   `GET /api/files`: List files (supports `?folderId=` and `?search=` filters).
-    *   `POST /api/files`: Upload new files.
-    *   `PUT /api/files/:id`: Update/overwrite a specific file.
-    *   `PATCH /api/files/:id`: Update file metadata (description, value date).
-    *   `DELETE /api/files/:id`: Delete a file.
-    *   `GET /api/files/:id/download`: Get a signed URL to download/preview a file.
-    *   `PUT /api/files/:id/move`: Move a file to another folder.
+### Folders
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/folders` | List all folders |
+| `POST` | `/api/folders` | Create a folder |
+| `PUT` | `/api/folders/:id` | Rename a folder |
+| `DELETE` | `/api/folders/:id` | Delete a folder |
+
+### Files
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/files` | List files (`?folderId=`, `?search=`) |
+| `POST` | `/api/files` | Upload file(s) |
+| `POST` | `/api/files/check-duplicates` | Check for existing files |
+| `PUT` | `/api/files/:id` | Overwrite file content |
+| `PATCH` | `/api/files/:id` | Update metadata |
+| `DELETE` | `/api/files/:id` | Delete a file |
+| `GET` | `/api/files/:id/download` | Get signed download URL |
+| `GET` | `/api/files/:id/preview` | Get inline preview URL |
+| `PUT` | `/api/files/:id/rename` | Rename a file |
+| `PUT` | `/api/files/:id/move` | Move to another folder |
+
+### Analysis (Gemini)
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/files/:id/analyze` | Analyze a single file |
+| `POST` | `/api/files/analyze-all` | Start batch analysis |
+| `GET` | `/api/files/analyze-all/status` | Poll batch status |
+| `GET` | `/api/files/analyze-all/history` | List past batches |
+| `GET` | `/api/files/analyze-all/:batchName/details` | Get batch results |
+
+### Vertex AI Search
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/search/datastores` | List datastores |
+| `POST` | `/api/search/datastores` | Create a datastore |
+| `DELETE` | `/api/search/datastores/:id` | Delete a datastore |
+| `POST` | `/api/search/datastores/:id/import` | Import documents |
+| `GET` | `/api/search/operations/status` | Check import progress |
+| `GET` | `/api/search/datastores/:id/imports` | Import history |
+| `GET` | `/api/search/datastores/:id/status` | Datastore status |
+| `GET` | `/api/search/datastores/:id/documents` | List indexed documents |
+| `DELETE` | `/api/search/datastores/:id/documents` | Purge all documents |
+| `POST` | `/api/search/datastores/:id/search` | Search query |
+| `POST` | `/api/search/datastores/:id/answer` | Answer query (LLM) |
+
+### Config
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/config` | Get bucket name and project ID |
