@@ -20,7 +20,7 @@ La base de connaissance est elle-même stockée dans fichier `kb.ndjson` (à la 
 - Frontend : React
 - Storage : Cloud Storage (Bucket pour les documents et le fichier `kb.ndjson`)
 - Hosting : Cloud Run avec Identity-Aware Proxy (IAP) activé directement sur le service
-- AI : Vertex AI Gemini 3 Pro (pour l'extraction de métadonnées et la génération de descriptions)
+- AI : Gemini 3 (pour l'extraction de métadonnées et la génération de descriptions)
 
 
 ## Détails d'implémentation technique
@@ -47,17 +47,20 @@ Le fichier de métadonnées doit suivre le format NDJSON (Newline Delimited JSON
 ### 2. Traitement Automatisé (Pipeline d'Upload)
 Lors de l'upload d'un document, le backend doit :
 1. Enregistrer le fichier dans le bucket Cloud Storage.
-2. Utiliser **Gemini 3 Pro** via l'API Vertex AI pour :
-    - Analyser le contenu et le nom du fichier pour extraire la "date de valeur".
-    - Générer un court descriptif du fichier.
-3. Mettre à jour (append) le fichier `kb.ndjson` avec l'entrée correspondante.
+2. Mettre à jour (append) le fichier `kb.ndjson` avec l'entrée correspondante.
 
-### 3. Gestion des Dossiers et Déplacements
+### 3. Utiliser **Gemini 3** (Pipeline Metadata Extract)
+L'analyse par Gemini doit permettre d'extraire les métadonnnées (unitairement ou massivement) :
+- Analyser le contenu et le nom du fichier pour extraire la "date de valeur".
+- Générer un court descriptif du fichier.
+- Catégoriser le document.
+
+### 4. Gestion des Dossiers et Déplacements
 Cloud Storage utilisant un namespace "flat", les dossiers sont simulés par des préfixes dans les noms d'objets.
 - Création de dossier : Création d'un objet vide avec un suffixe `/`.
 - Déplacement : Utilisation de la méthode `file.move()` pour renommer le préfixe du fichier vers la nouvelle destination.
 
-### 4. Sécurité (Cloud Run + IAP)
+### 5. Sécurité (Cloud Run + IAP)
 L'accès à l'interface est sécurisé via IAP configuré directement sur le service Cloud Run. Cela permet une authentification basée sur l'identité (Google Workspace) sans nécessiter de Load Balancer externe, garantissant que seuls les utilisateurs autorisés accèdent à l'outil de gestion.
 
 
@@ -65,9 +68,9 @@ L'accès à l'interface est sécurisé via IAP configuré directement sur le ser
 
 - En tant qu'utilisateur, je dois pouvoir uploader un nouveau fichier dans la base de connaissances. Mettre à jour avec une nouvelle version du fichier, le supprimer et le récupérer en téléchargement. 
 
-- Lors du chargement d'un fichier, il y a doit extraire la date de valeur soit dans le contenu. Exemple date de réunion ou dans le nom du fichier. 
+- En tant qu'utilisateur, je dois pouvoir lancer une analyse IA (unitaire ou par lot) pour extraire la date de valeur, générer un court descriptif et catégoriser le document.
 
-- Lors du chargement d'un fichier, il y a doit générer un cours descriptif du fichier. 
+- En tant qu'utilisateur, je dois pouvoir corriger manuellement les métadonnées générées par l'IA (date de valeur, description, catégorie).
 
 - En tant qu'utilisateur, je dois pouvoir gérer les dossiers( création édition suppression).
 
@@ -93,7 +96,7 @@ L'accès à l'interface est sécurisé via IAP configuré directement sur le ser
 
 ### 📄 Gestion des Fichiers
 *   **`GET /api/files`** : Lister les fichiers. Possibilité de filtrer par dossier (`?folderId=`) ou par nom de fichier (`?search=`).
-*   **`POST /api/files`** : Uploader un ou plusieurs fichiers. Déclenche l'analyse par Gemini 3 Pro et la création de l'entrée dans `kb.ndjson`.
+*   **`POST /api/files`** : Uploader un ou plusieurs fichiers et créer l'entrée dans `kb.ndjson`.
 *   **`PUT /api/files/:id`** : Mettre à jour le fichier physique (nouvelle version). Redéclenche l'analyse Gemini.
 *   **`PATCH /api/files/:id`** : Mettre à jour uniquement les métadonnées du fichier (Renommage, correction manuelle de la `Date de valeur` ou `Description` via le volet latéral).
 *   **`DELETE /api/files/:id`** : Supprimer un fichier (et son entrée dans `kb.ndjson`).
