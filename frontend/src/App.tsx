@@ -62,6 +62,10 @@ function App() {
   }, [currentFolder, searchQuery]);
 
   useEffect(() => {
+    document.title = import.meta.env.VITE_APP_NAME || 'KB-Studio';
+  }, []);
+
+  useEffect(() => {
     loadData();
   }, [loadData]);
 
