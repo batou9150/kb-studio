@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import type { FileItem } from '../types';
-import { FileText, Image, File as FileIcon, Trash2, Download, FolderPlus, ArrowUpFromLine, FileUp, FolderUp, Folder, Pencil, Check, X, Search, ChevronDown, Upload, Eye } from 'lucide-react';
+import { FileText, Image, File as FileIcon, Trash2, Download, FolderPlus, ArrowUpFromLine, FileUp, FolderUp, Folder, Pencil, Check, X, Search, ChevronDown, Upload, Eye, Sparkles, Loader } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface ExplorerProps {
@@ -13,10 +13,12 @@ interface ExplorerProps {
   onDownloadFile: (id: string) => void;
   onRenameFile: (id: string, newName: string) => void;
   onSearch: (query: string) => void;
+  onAnalyzeAll: () => void;
+  analyzeProgress: { done: number; total: number } | null;
 }
 
 export const Explorer: React.FC<ExplorerProps> = ({ 
-  files, selectedFile, onSelectFile, onUpload, onDeleteFile, onDownloadFile, onRenameFile, onSearch
+  files, selectedFile, onSelectFile, onUpload, onDeleteFile, onDownloadFile, onRenameFile, onSearch, onAnalyzeAll, analyzeProgress
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
@@ -65,6 +67,15 @@ export const Explorer: React.FC<ExplorerProps> = ({
           />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button
+            className="btn btn-outline"
+            onClick={onAnalyzeAll}
+            disabled={analyzeProgress !== null || files.length === 0}
+            title="Analyser tous les fichiers avec Gemini"
+          >
+            {analyzeProgress ? <Loader size={16} className="spinner" /> : <Sparkles size={16} />}
+            {analyzeProgress ? `Analyse... ${analyzeProgress.done}/${analyzeProgress.total}` : 'Analyser tout'}
+          </button>
           <div className="upload-dropdown">
             <button className="btn btn-outline" onClick={() => setUploadMenuOpen(!uploadMenuOpen)}>
               <ArrowUpFromLine size={16} />

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import './App.css';
 import { api } from './api';
 import type { FileItem } from './types';
@@ -22,6 +22,10 @@ function App() {
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Batch analysis state
+  const [analyzeProgress, setAnalyzeProgress] = useState<{ done: number; total: number } | null>(null);
+  const batchNameRef = useRef<string | null>(null);
 
   // Duplicate detection state
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
@@ -48,6 +52,16 @@ function App() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Keep selectedFile in sync with refreshed files list
+  useEffect(() => {
+    if (selectedFile) {
+      const updated = files.find(f => f.id === selectedFile.id);
+      if (updated && updated !== selectedFile) {
+        setSelectedFile(updated);
+      }
+    }
+  }, [files, selectedFile]);
 
   const handleSelectFolder = (folderId: string) => {
     setCurrentFolder(folderId);
@@ -140,9 +154,9 @@ function App() {
     setIsPanelOpen(true);
   };
 
-  const handleUpdateMetadata = async (id: string, description: string, date: string) => {
+  const handleUpdateMetadata = async (id: string, description: string, date: string, category: string) => {
     try {
-      await api.updateFileMetadata(id, description, date);
+      await api.updateFileMetadata(id, description, date, category);
       alert('Métadonnées mises à jour avec succès.');
       loadData();
     } catch (err) {
@@ -188,6 +202,44 @@ function App() {
       alert('Erreur lors du déplacement.');
     }
   };
+
+  const handleAnalyzeAll = async () => {
+    try {
+      const { batchName, totalFiles } = await api.startAnalyzeAll();
+      batchNameRef.current = batchName;
+      setAnalyzeProgress({ done: 0, total: totalFiles });
+    } catch (err) {
+      alert('Erreur lors du lancement de l\'analyse.');
+    }
+  };
+
+  useEffect(() => {
+    if (!batchNameRef.current) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const status = await api.getAnalyzeAllStatus(batchNameRef.current!);
+        if (status.state === 'succeeded') {
+          batchNameRef.current = null;
+          setAnalyzeProgress(null);
+          loadData();
+        } else if (status.state === 'failed' || status.state === 'cancelled') {
+          batchNameRef.current = null;
+          setAnalyzeProgress(null);
+          alert('L\'analyse batch a échoué.');
+        } else {
+          setAnalyzeProgress({
+            done: status.succeededCount ?? 0,
+            total: status.totalCount ?? analyzeProgress?.total ?? 0,
+          });
+        }
+      } catch {
+        // Ignore polling errors, retry next interval
+      }
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [analyzeProgress, loadData]);
 
   return (
     <div className="app-container">
@@ -242,6 +294,8 @@ function App() {
               onDownloadFile={handleDownloadFile}
               onRenameFile={handleRenameFile}
               onSearch={setSearchQuery}
+              onAnalyzeAll={handleAnalyzeAll}
+              analyzeProgress={analyzeProgress}
             />
           )}
 

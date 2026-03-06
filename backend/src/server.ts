@@ -9,6 +9,7 @@ import {
   extractValueDate, resolveFilePath
 } from './services/storage';
 import type { KbEntry } from './services/storage';
+import { analyzeFile, startBatchAnalysis, getBatchAnalysisStatus } from './services/gemini';
 import {
   listDataStores as searchListDataStores,
   createDataStore as searchCreateDataStore,
@@ -129,6 +130,7 @@ app.post('/api/files', upload.array('files'), async (req, res) => {
           title: file.originalname,
           description: '',
           value_date: extractValueDate(file.originalname),
+          category: '',
         },
         content: {
           mimeType: file.mimetype,
@@ -169,10 +171,10 @@ app.put('/api/files/:id', upload.single('file'), async (req, res) => {
 // PATCH /api/files/:id
 app.patch('/api/files/:id', async (req, res) => {
   try {
-    const { description, value_date } = req.body;
+    const { description, value_date, category } = req.body;
     const id = req.params.id as string;
-    
-    const updated = await updateKbEntry(id, { description, value_date });
+
+    const updated = await updateKbEntry(id, { description, value_date, category });
     res.json(updated);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -305,6 +307,50 @@ app.delete('/api/files', async (req, res) => {
     await deleteAllFiles();
     res.json({ success: true });
   } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- Gemini analysis routes ---
+
+// POST /api/files/analyze-all — Start batch analysis (must be before :id route)
+app.post('/api/files/analyze-all', async (req, res) => {
+  try {
+    const result = await startBatchAnalysis();
+    res.json(result);
+  } catch (err: any) {
+    console.error('Batch analysis error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/files/analyze-all/status — Poll batch status
+app.get('/api/files/analyze-all/status', async (req, res) => {
+  try {
+    const batchName = req.query.batchName as string;
+    if (!batchName) return res.status(400).json({ error: 'batchName query parameter is required' });
+
+    const result = await getBatchAnalysisStatus(batchName);
+    res.json(result);
+  } catch (err: any) {
+    console.error('Batch status error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/files/:id/analyze — Single file analysis
+app.post('/api/files/:id/analyze', async (req, res) => {
+  try {
+    const id = req.params.id as string;
+    const metadata = await getKbMetadata();
+    const entry = metadata.find(m => m.id === id);
+    if (!entry) return res.status(404).json({ error: 'File not found in kb.ndjson' });
+
+    const result = await analyzeFile(entry);
+    await updateKbEntry(id, result);
+    res.json(result);
+  } catch (err: any) {
+    console.error('Analyze file error:', err);
     res.status(500).json({ error: err.message });
   }
 });

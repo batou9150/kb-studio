@@ -31,6 +31,7 @@ export interface KbEntry {
     title: string;
     description: string;
     value_date: string;
+    category: string;
   };
   content: {
     mimeType: string;
@@ -103,6 +104,7 @@ async function reconcileKbMetadata(): Promise<void> {
         title: fileName,
         description: '',
         value_date: extractValueDate(fileName),
+        category: '',
       },
       content: {
         mimeType: file.metadata.contentType || 'application/octet-stream',

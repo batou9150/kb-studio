@@ -4,6 +4,7 @@ export interface Metadata {
     title: string;
     description: string;
     value_date: string;
+    category: string;
   };
   content: {
     mimeType: string;
