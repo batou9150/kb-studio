@@ -8,6 +8,12 @@ const apiClient = axios.create({
 });
 
 export const api = {
+  // Config
+  getConfig: async (): Promise<{ bucketName: string; projectId: string }> => {
+    const res = await apiClient.get('/config');
+    return res.data;
+  },
+
   // Folders
   getFolders: async (): Promise<string[]> => {
     const res = await apiClient.get('/folders');

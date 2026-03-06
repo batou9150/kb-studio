@@ -70,8 +70,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ folders, currentFolder, onSele
   };
 
   return (
-    <aside className="sidebar">
-      <div className="sidebar-header">
+    <aside className="explorer-sidebar">
+      <div className="explorer-sidebar-header">
         Dossiers
         <button className="icon-btn" title="Nouveau Dossier" onClick={onCreateFolder}>
           <FolderPlus size={18} />

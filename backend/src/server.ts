@@ -45,6 +45,14 @@ initStorage();
 
 const requireBucketName = process.env.GCS_BUCKET_NAME || 'kb-studio-bucket';
 
+// GET /api/config
+app.get('/api/config', (_req, res) => {
+  res.json({
+    bucketName: requireBucketName,
+    projectId: process.env.GOOGLE_CLOUD_PROJECT || '',
+  });
+});
+
 // GET /api/folders
 app.get('/api/folders', async (req, res) => {
   try {

@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import type { FileItem } from '../types';
-import { FileText, Image, File as FileIcon, Trash2, Download, FolderPlus, ArrowUpFromLine, FileUp, FolderUp, Folder, Pencil, Check, X, Search, ChevronDown, Upload, Eye, Sparkles, Loader } from 'lucide-react';
+import { FileText, Image, File as FileIcon, Trash2, Download, FolderPlus, ArrowUpFromLine, FileUp, FolderUp, Folder, Pencil, Check, X, Search, ChevronDown, Upload, Eye, Sparkles, Loader, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface ExplorerProps {
@@ -15,10 +15,14 @@ interface ExplorerProps {
   onSearch: (query: string) => void;
   onAnalyzeAll: () => void;
   analyzeProgress: { state: 'preparing' } | { state: 'starting' } | { state: 'running'; done: number; total: number } | null;
+  bucketName: string;
+  projectId: string;
+  sidebar?: React.ReactNode;
+  detailsPanel?: React.ReactNode;
 }
 
-export const Explorer: React.FC<ExplorerProps> = ({ 
-  files, selectedFile, onSelectFile, onUpload, onDeleteFile, onDownloadFile, onRenameFile, onSearch, onAnalyzeAll, analyzeProgress
+export const Explorer: React.FC<ExplorerProps> = ({
+  files, selectedFile, onSelectFile, onUpload, onDeleteFile, onDownloadFile, onRenameFile, onSearch, onAnalyzeAll, analyzeProgress, bucketName, projectId, sidebar, detailsPanel
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
@@ -56,17 +60,37 @@ export const Explorer: React.FC<ExplorerProps> = ({
   return (
     <div className="explorer" {...getRootProps()}>
       <input {...getInputProps()} />
-      
+
       <div className="explorer-toolbar">
-        <div className="search-bar">
-          <Search size={18} color="var(--text-secondary)" />
-          <input
-            type="text"
-            placeholder="Rechercher un fichier..."
-            onChange={(e) => onSearch(e.target.value)}
-          />
+        <div className="explorer-toolbar-left">
+          {bucketName && (
+            <>
+              <span className="bucket-name">{bucketName}</span>
+              {projectId && (
+                <a
+                  className="icon-btn"
+                  href={`https://console.cloud.google.com/storage/browser/${bucketName}?project=${projectId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Ouvrir dans la console GCS"
+                >
+                  <ExternalLink size={16} />
+                </a>
+              )}
+            </>
+          )}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div className="explorer-toolbar-center">
+          <div className="search-bar">
+            <Search size={18} color="var(--text-secondary)" />
+            <input
+              type="text"
+              placeholder="Rechercher un fichier..."
+              onChange={(e) => onSearch(e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="explorer-toolbar-right">
           <button
             className="btn btn-outline"
             onClick={onAnalyzeAll}
@@ -125,7 +149,9 @@ export const Explorer: React.FC<ExplorerProps> = ({
         </div>
       </div>
 
-      <div className="explorer-content">
+      <div className="explorer-body">
+        {sidebar}
+        <div className="explorer-content">
         {isDragActive && !internalDrag && (
           <div className="dropzone active">
             <Upload size={32} />
@@ -225,6 +251,8 @@ export const Explorer: React.FC<ExplorerProps> = ({
             </tbody>
           </table>
         )}
+        </div>
+        {detailsPanel}
       </div>
     </div>
   );
