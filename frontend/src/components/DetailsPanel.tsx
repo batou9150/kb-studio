@@ -133,7 +133,7 @@ export const DetailsPanel: React.FC<DetailsPanelProps> = ({
           )}
         </div>
 
-        <h3 style={{ fontSize: '1.1rem', marginBottom: '16px' }}>Métadonnées (Gemini)</h3>
+        <h3 style={{ fontSize: '1.1rem', marginBottom: '16px' }}>Métadonnées</h3>
 
         <div className="form-group">
           <label htmlFor="value_date">Date de valeur</label>
