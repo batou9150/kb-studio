@@ -31,9 +31,11 @@ Le fichier de métadonnées doit suivre le format NDJSON (Newline Delimited JSON
 {
   "id": "unique-doc-id",
   "structData": {
-    "title": "Nom du fichier",
+    "category": "how_to"
     "description": "Description générée par l'IA",
-    "date_valeur": "YYYY-MM-DD"
+    "folder": "Dossier du fichier",
+    "title": "Nom du fichier",
+    "value_date": "YYYY-MM-DD",
   },
   "content": {
     "mimeType": "application/pdf",
@@ -78,8 +80,6 @@ L'accès à l'interface est sécurisé via IAP configuré directement sur le ser
 
 - Intégrer une visionneuse de documents
 
-- Intégration des solutions de stockage type Google drive, onedrive, box, etc
-
 - Preview du search avec une application vertex ai search directement interface
 
 
@@ -106,7 +106,6 @@ L'accès à l'interface est sécurisé via IAP configuré directement sur le ser
 ### 📐 Mise en page globale (Layout)
 *   **Barre de navigation supérieure (Header)** :
     *   **Logo/Titre** : KB-Studio.
-    *   **Fil d'Ariane (Breadcrumbs)** : Affiche l'emplacement actuel (ex: `Racine > RH > Contrats`).
     *   **Barre de recherche rapide** : Pour trouver un document par son nom.
 *   **Sidebar gauche (Arborescence uniquement)** :
     *   **Arbre des dossiers** : Une vue hiérarchique dépliable de tous les dossiers pour une navigation rapide et servant de cible pour le "Glisser-Déposer".
