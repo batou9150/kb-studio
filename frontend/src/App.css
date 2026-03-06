@@ -904,6 +904,29 @@ textarea.form-control {
   padding: 0;
 }
 
+.answer-text table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 12px;
+  font-size: 0.9em;
+}
+
+.answer-text th,
+.answer-text td {
+  border: 1px solid var(--border-color);
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.answer-text th {
+  background-color: var(--bg-color);
+  font-weight: 600;
+}
+
+.answer-text tr:nth-child(even) {
+  background-color: var(--bg-color);
+}
+
 /* Status Badge */
 .status-badge {
   display: inline-flex;
