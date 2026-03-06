@@ -18,7 +18,9 @@ function App() {
   const [currentFolder, setCurrentFolder] = useState<string>('');
   const [files, setFiles] = useState<FileItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  
+  const [bucketName, setBucketName] = useState('');
+  const [projectId, setProjectId] = useState('');
+
   const [currentView, setCurrentView] = useState<'explorer' | 'admin' | 'index' | 'answer'>('explorer');
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
@@ -63,6 +65,10 @@ function App() {
 
   useEffect(() => {
     document.title = import.meta.env.VITE_APP_NAME || 'KB-Studio';
+    api.getConfig().then(({ bucketName, projectId }) => {
+      setBucketName(bucketName);
+      setProjectId(projectId);
+    });
   }, []);
 
   useEffect(() => {
@@ -304,15 +310,6 @@ function App() {
         </div>
       ) : (
         <div className="main-content">
-          <Sidebar
-            folders={folders}
-            currentFolder={currentFolder}
-            onSelectFolder={handleSelectFolder}
-            onMoveFile={handleMoveFile}
-            onUploadToFolder={handleUploadToFolder}
-            onCreateFolder={handleCreateFolder}
-          />
-
           {loading && files.length === 0 ? (
             <div className="explorer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Loader className="spinner" size={48} color="var(--primary-color)" />
@@ -329,16 +326,29 @@ function App() {
               onSearch={setSearchQuery}
               onAnalyzeAll={handleAnalyzeAll}
               analyzeProgress={analyzeProgress}
+              bucketName={bucketName}
+              projectId={projectId}
+              sidebar={
+                <Sidebar
+                  folders={folders}
+                  currentFolder={currentFolder}
+                  onSelectFolder={handleSelectFolder}
+                  onMoveFile={handleMoveFile}
+                  onUploadToFolder={handleUploadToFolder}
+                  onCreateFolder={handleCreateFolder}
+                />
+              }
+              detailsPanel={
+                <DetailsPanel
+                  file={selectedFile}
+                  isOpen={isPanelOpen}
+                  onClose={() => setIsPanelOpen(false)}
+                  onUpdateMetadata={handleUpdateMetadata}
+                  onRenameFile={handleRenameFile}
+                />
+              }
             />
           )}
-
-          <DetailsPanel
-            file={selectedFile}
-            isOpen={isPanelOpen}
-            onClose={() => setIsPanelOpen(false)}
-            onUpdateMetadata={handleUpdateMetadata}
-            onRenameFile={handleRenameFile}
-          />
         </div>
       )}
     </div>

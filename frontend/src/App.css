@@ -89,8 +89,8 @@ body {
   overflow: hidden;
 }
 
-/* Sidebar */
-.sidebar {
+/* Explorer Sidebar */
+.explorer-sidebar {
   width: var(--sidebar-width);
   background-color: var(--surface-color);
   border-right: 1px solid var(--border-color);
@@ -99,7 +99,7 @@ body {
   flex-shrink: 0;
 }
 
-.sidebar-header {
+.explorer-sidebar-header {
   padding: 16px;
   font-weight: 600;
   border-bottom: 1px solid var(--border-color);
@@ -150,15 +150,51 @@ body {
   flex-direction: column;
   background-color: var(--bg-color);
   position: relative;
+  overflow: hidden;
+}
+
+.explorer-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
 }
 
 .explorer-toolbar {
-  padding: 16px 24px;
+  padding: 12px 24px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
   background-color: var(--surface-color);
   border-bottom: 1px solid var(--border-color);
+  gap: 16px;
+}
+
+.explorer-toolbar-left {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.bucket-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.explorer-toolbar-center {
+  display: flex;
+  justify-content: center;
+}
+
+.explorer-toolbar-right {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
 }
 
 .upload-dropdown {
