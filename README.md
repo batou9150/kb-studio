@@ -1,5 +1,8 @@
 # KB-Studio
 
+[![Docker Pulls](https://img.shields.io/docker/pulls/batou9150/kb-studio.svg)](https://hub.docker.com/r/batou9150/kb-studio/)
+[![Docker Stars](https://img.shields.io/docker/stars/batou9150/kb-studio.svg)](https://hub.docker.com/r/batou9150/kb-studio/)
+
 KB-Studio is a web application designed to allow non-technical users to manage a knowledge base for RAG (Retrieval-Augmented Generation) systems within AI conversational agents.
 
 **Tagline:** Pilotez votre base de connaissances
@@ -132,6 +135,28 @@ The application is accessible at `http://localhost:8080`.
 | `APP_LOGO` | Custom logo URL | — |
 
 Branding (`APP_NAME`, `APP_LOGO`) is configured at runtime — no rebuild needed to change them.
+
+### 5. Deploy to Google Cloud Run
+
+Deploy the image available on [Docker Hub](https://hub.docker.com/r/batou9150/kb-studio/) directly to Cloud Run:
+
+```bash
+gcloud run deploy kb-studio \
+  --image docker.io/batou9150/kb-studio:latest \
+  --region REGION \
+  --platform managed \
+  --no-allow-unauthenticated \
+  --iap \
+  --set-env-vars GCS_BUCKET_NAME=my-bucket \
+  --set-env-vars GOOGLE_CLOUD_PROJECT=my-project \
+  --set-env-vars GEMINI_API_KEY=my-key \
+  --set-env-vars APP_NAME="My Knowledge Base" \
+  --set-env-vars APP_LOGO="https://example.com/logo.png"
+```
+
+Replace `REGION` with your preferred region (e.g., `europe-west1`).
+
+> **Tip:** For sensitive values like `GEMINI_API_KEY`, consider using [Secret Manager](https://cloud.google.com/run/docs/configuring/services/secrets) instead of plain environment variables.
 
 ## Project Structure
 
