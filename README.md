@@ -237,3 +237,7 @@ kb-studio/
 | Method | Endpoint | Description |
 |---|---|---|
 | `GET` | `/api/config` | Get bucket name, project ID, app name, and app logo |
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
