@@ -257,6 +257,26 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ bucketNames, selectedB
     }
   };
 
+  const formatDuration = (createTime: string | null, updateTime: string | null): string | null => {
+    if (!createTime || !updateTime) return null;
+    const ms = new Date(updateTime).getTime() - new Date(createTime).getTime();
+    if (ms < 0) return null;
+    const seconds = Math.floor(ms / 1000);
+    if (seconds < 60) return t('durationSeconds', { count: seconds });
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    if (minutes < 60) {
+      return remainingSeconds > 0
+        ? t('durationMinutesSeconds', { minutes, seconds: remainingSeconds })
+        : t('durationMinutes', { count: minutes });
+    }
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return remainingMinutes > 0
+      ? t('durationHoursMinutes', { hours, minutes: remainingMinutes })
+      : t('durationHours', { count: hours });
+  };
+
   const isActionLoading = actionLoading !== null;
 
   return (
@@ -534,9 +554,14 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ bucketNames, selectedB
                               <StatusBadge variant="primary" icon={<Loader size={12} className="spinner" />}>{t('inProgress')}</StatusBadge>
                             ) : op.error ? (
                               <StatusBadge variant="danger" icon={<XCircle size={12} />}>{t('error')}</StatusBadge>
-                            ) : (
-                              <StatusBadge variant="success" icon={<CheckCircle size={12} />}>{t('done')}</StatusBadge>
-                            )}
+                            ) : (() => {
+                              const duration = formatDuration(op.createTime, op.updateTime);
+                              return (
+                                <StatusBadge variant="success" icon={<CheckCircle size={12} />}>
+                                  {duration ? t('doneIn', { duration }) : t('done')}
+                                </StatusBadge>
+                              );
+                            })()}
                           </td>
                           <td>{op.successCount}</td>
                           <td>{op.failureCount > 0 ? <span style={{ color: 'var(--danger-color)' }}>{op.failureCount}</span> : op.failureCount}</td>
