@@ -124,7 +124,7 @@ export async function listBatches(): Promise<{
     JOB_STATE_PENDING: 'running',
   };
 
-  const result: { name: string; state: string; displayName: string; createTime: string; updateTime: string }[] = [];
+  const result: { name: string; state: string; displayName: string; createTime: string; endTime: string }[] = [];
   const pager = await ai.batches.list({ config: { pageSize: 100 } });
   for await (const batch of pager) {
     const dn = batch.displayName ?? '';
