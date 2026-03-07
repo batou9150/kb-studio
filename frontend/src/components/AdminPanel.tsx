@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../api';
-import { FolderPlus, Pencil, Trash2, AlertTriangle, Loader, History, Eye } from 'lucide-react';
+import { FolderPlus, Pencil, Trash2, AlertTriangle, Loader, History, Eye, CheckCircle, XCircle } from 'lucide-react';
 import { BucketSelector } from './BucketSelector';
 import { AnalyzeResultsTable } from './AnalyzeResultsTable';
+import { StatusBadge } from './StatusBadge';
 
 interface BatchInfo {
   name: string;
   state: string;
   displayName: string;
   createTime: string;
+  endTime: string;
 }
 
 interface BatchDetails {
@@ -109,6 +111,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ folders, onDataChanged, 
     }
   };
 
+  const formatDuration = (createTime: string, updateTime: string): string | null => {
+    if (!createTime || !updateTime) return null;
+    const ms = new Date(updateTime).getTime() - new Date(createTime).getTime();
+    if (ms < 0) return null;
+    const seconds = Math.floor(ms / 1000);
+    if (seconds < 60) return `${seconds}s`;
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    if (minutes < 60) {
+      return remainingSeconds > 0 ? `${minutes}min ${remainingSeconds}s` : `${minutes}min`;
+    }
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}min` : `${hours}h`;
+  };
+
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '—';
     try {
@@ -180,8 +198,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ folders, onDataChanged, 
           <thead>
             <tr>
               <th>{tc('colName')}</th>
-              <th>{t('colState')}</th>
               <th>{tc('colDate')}</th>
+              <th>{t('colStatus')}</th>
               <th style={{ width: 140 }}>{tc('colActions')}</th>
             </tr>
           </thead>
@@ -193,8 +211,23 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ folders, onDataChanged, 
                 <React.Fragment key={batch.name}>
                   <tr>
                     <td>{batch.displayName}</td>
-                    <td><span className={`batch-state-badge batch-state-${batch.state}`}>{batch.state}</span></td>
                     <td>{formatDate(batch.createTime)}</td>
+                    <td>
+                      {batch.state === 'running' ? (
+                        <StatusBadge variant="primary" icon={<Loader size={12} className="spinner" />}>{t('inProgress')}</StatusBadge>
+                      ) : batch.state === 'failed' ? (
+                        <StatusBadge variant="danger" icon={<XCircle size={12} />}>{t('error')}</StatusBadge>
+                      ) : batch.state === 'succeeded' ? (() => {
+                        const duration = formatDuration(batch.createTime, batch.endTime);
+                        return (
+                          <StatusBadge variant="success" icon={<CheckCircle size={12} />}>
+                            {duration ? t('doneIn', { duration }) : t('done')}
+                          </StatusBadge>
+                        );
+                      })() : (
+                        <StatusBadge variant="warning" icon={<AlertTriangle size={12} />}>{batch.state}</StatusBadge>
+                      )}
+                    </td>
                     <td>
                       <button
                         className="btn btn-outline"
