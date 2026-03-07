@@ -276,6 +276,12 @@ body {
   border-radius: 0 0 6px 6px;
 }
 
+.upload-dropdown-separator {
+  height: 1px;
+  background-color: var(--border-color);
+  margin: 4px 0;
+}
+
 .btn {
   display: inline-flex;
   align-items: center;
@@ -652,6 +658,41 @@ textarea.form-control {
   gap: 12px;
   padding: 16px 20px;
   border-top: 1px solid var(--border-color);
+}
+
+.code-block-wrapper {
+  position: relative;
+}
+
+.code-block {
+  background-color: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 16px;
+  padding-right: 48px;
+  font-family: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.code-block code {
+  color: var(--text-primary);
+}
+
+.code-block-copy.icon-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background-color: var(--surface-color);
+  padding: 6px;
+}
+
+.code-block-copy.icon-btn:hover {
+  border-color: var(--text-secondary);
 }
 
 /* Analyze Results */

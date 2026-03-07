@@ -12,6 +12,8 @@
   "import": "Import",
   "importFiles": "Files",
   "importFolder": "Folder",
+  "importWith": "Import with",
+  "cliImportDesc": "Run the following command in the directory containing your files to copy them into the bucket:",
   "dropFiles": "Drop files here to upload",
   "emptyFolder": "This folder is empty",
   "emptyFolderHint": "Drag and drop files here or use the Import button.",

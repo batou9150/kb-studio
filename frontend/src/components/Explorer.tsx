@@ -2,7 +2,8 @@ import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDropzone } from 'react-dropzone';
 import type { FileItem } from '../types';
-import { FileText, Image, File as FileIcon, Trash2, Download, FolderPlus, ArrowUpFromLine, FileUp, FolderUp, Folder, Pencil, Check, X, Search, ChevronDown, Upload, Eye, Sparkles, Loader } from 'lucide-react';
+import { FileText, Image, File as FileIcon, Trash2, Download, FolderPlus, ArrowUpFromLine, FileUp, FolderUp, Folder, Pencil, Check, X, Search, ChevronDown, Upload, Eye, Sparkles, Loader, Terminal, Copy, CheckCheck } from 'lucide-react';
+import { Modal } from './Modal';
 import { BucketSelector } from './BucketSelector';
 import { format } from 'date-fns';
 
@@ -34,6 +35,8 @@ export const Explorer: React.FC<ExplorerProps> = ({
   const [editingName, setEditingName] = useState('');
   const [internalDrag, setInternalDrag] = useState(false);
   const [uploadMenuOpen, setUploadMenuOpen] = useState(false);
+  const [cliModal, setCliModal] = useState<'gcloud' | 'gsutil' | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     onUpload(acceptedFiles);
@@ -56,6 +59,19 @@ export const Explorer: React.FC<ExplorerProps> = ({
   };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, noClick: true });
+
+  const getCliCommand = (tool: 'gcloud' | 'gsutil') => {
+    if (tool === 'gcloud') {
+      return `gcloud storage cp -r ./* gs://${selectedBucket}/`;
+    }
+    return `gsutil -m cp -r ./* gs://${selectedBucket}/`;
+  };
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const getFileIcon = (contentType: string) => {
     if (contentType.startsWith('image/')) return <Image size={18} color="var(--primary-color)" />;
@@ -117,6 +133,15 @@ export const Explorer: React.FC<ExplorerProps> = ({
                   <button onClick={() => { setUploadMenuOpen(false); document.getElementById('folder-upload')?.click(); }}>
                     <FolderUp size={16} />
                     {t('importFolder')}
+                  </button>
+                  <div className="upload-dropdown-separator" />
+                  <button onClick={() => { setUploadMenuOpen(false); setCliModal('gcloud'); }}>
+                    <Terminal size={16} />
+                    gcloud
+                  </button>
+                  <button onClick={() => { setUploadMenuOpen(false); setCliModal('gsutil'); }}>
+                    <Terminal size={16} />
+                    gsutil
                   </button>
                 </div>
               </>
@@ -251,6 +276,34 @@ export const Explorer: React.FC<ExplorerProps> = ({
         </div>
         {detailsPanel}
       </div>
+
+      {cliModal && (
+        <Modal
+          title={`${t('importWith')} ${cliModal}`}
+          icon={<Terminal size={20} />}
+          onClose={() => { setCliModal(null); setCopied(false); }}
+          width={560}
+          footer={
+            <button className="btn btn-outline" onClick={() => { setCliModal(null); setCopied(false); }}>
+              {tc('close')}
+            </button>
+          }
+        >
+          <p>{t('cliImportDesc')}</p>
+          <div className="code-block-wrapper">
+            <button
+              className="icon-btn code-block-copy"
+              title={tc('copy')}
+              onClick={() => handleCopy(getCliCommand(cliModal))}
+            >
+              {copied ? <CheckCheck size={16} /> : <Copy size={16} />}
+            </button>
+            <div className="code-block">
+              <code>{getCliCommand(cliModal)}</code>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };
