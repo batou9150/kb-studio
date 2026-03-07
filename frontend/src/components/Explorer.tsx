@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDropzone } from 'react-dropzone';
 import type { FileItem } from '../types';
-import { FileText, Image, File as FileIcon, Trash2, Download, FolderPlus, ArrowUpFromLine, FileUp, FolderUp, Folder, Pencil, Check, X, Search, ChevronDown, Upload, Eye, Sparkles, Loader, Terminal, Copy, CheckCheck } from 'lucide-react';
+import { FileText, Image, File as FileIcon, Trash2, Download, FolderPlus, ArrowUpFromLine, FileUp, FolderUp, Folder, Pencil, Check, X, Search, ChevronDown, Upload, Eye, Sparkles, Loader, Terminal, Copy, CheckCheck, RefreshCw } from 'lucide-react';
 import { Modal } from './Modal';
 import { BucketSelector } from './BucketSelector';
 import { format } from 'date-fns';
@@ -22,12 +22,13 @@ interface ExplorerProps {
   selectedBucket: string;
   onBucketChange: (bucket: string) => void;
   projectId: string;
+  onRefresh: () => void;
   sidebar?: React.ReactNode;
   detailsPanel?: React.ReactNode;
 }
 
 export const Explorer: React.FC<ExplorerProps> = ({
-  files, selectedFile, onSelectFile, onUpload, onDeleteFile, onDownloadFile, onRenameFile, onSearch, onAnalyzeAll, analyzeProgress, bucketNames, selectedBucket, onBucketChange, projectId, sidebar, detailsPanel
+  files, selectedFile, onSelectFile, onUpload, onDeleteFile, onDownloadFile, onRenameFile, onSearch, onAnalyzeAll, analyzeProgress, bucketNames, selectedBucket, onBucketChange, projectId, onRefresh, sidebar, detailsPanel
 }) => {
   const { t } = useTranslation('explorer');
   const tc = useTranslation('common').t;
@@ -168,6 +169,9 @@ export const Explorer: React.FC<ExplorerProps> = ({
               }}
             />
           </div>
+          <button className="icon-btn" title={tc('refresh')} onClick={onRefresh}>
+            <RefreshCw size={16} />
+          </button>
         </div>
       </div>
 

@@ -356,6 +356,7 @@ function App() {
               selectedBucket={selectedBucket}
               onBucketChange={handleBucketChange}
               projectId={projectId}
+              onRefresh={loadData}
               sidebar={
                 <Sidebar
                   folders={folders}
