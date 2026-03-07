@@ -94,7 +94,7 @@ export const api = {
     const res = await apiClient.get('/files/analyze-all/status', { params });
     return res.data;
   },
-  getAnalyzeHistory: async (): Promise<{ name: string; state: string; displayName: string; createTime: string }[]> => {
+  getAnalyzeHistory: async (): Promise<{ name: string; state: string; displayName: string; createTime: string; endTime: string }[]> => {
     const res = await apiClient.get('/files/analyze-all/history');
     return res.data;
   },
