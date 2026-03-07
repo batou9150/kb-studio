@@ -428,10 +428,10 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ bucketNames, selectedB
         )}
       </div>
 
-      {error && <div className="error-banner">{error}</div>}
+      {!showCreateForm && error && <div className="error-banner">{error}</div>}
 
       {/* Status */}
-      {ds.dataStoreId && (
+      {!showCreateForm && ds.dataStoreId && (
         <div className="vais-section">
           <div className="vais-section-header">
             <h2>{t('status')}</h2>
@@ -470,7 +470,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ bucketNames, selectedB
       )}
 
       {/* Import */}
-      {status?.exists && (
+      {!showCreateForm && status?.exists && (
         <div className="vais-section">
           <div className="vais-section-header">
             <h2>{t('import')}</h2>
@@ -555,7 +555,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ bucketNames, selectedB
       )}
 
       {/* Documents */}
-      {status?.exists && (
+      {!showCreateForm && status?.exists && (
         <div className="vais-section">
           <div className="vais-section-header">
             <h2>{t('documents')} ({status.documentCount})</h2>
@@ -620,7 +620,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ bucketNames, selectedB
       )}
 
       {/* Danger zone */}
-      {status?.exists && (
+      {!showCreateForm && status?.exists && (
         <div className="danger-zone">
           <div className="danger-zone-header">
             <AlertTriangle size={20} />
