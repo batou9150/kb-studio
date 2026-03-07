@@ -114,6 +114,7 @@ export async function listBatches(): Promise<{
   state: string;
   displayName: string;
   createTime: string;
+  endTime: string;
 }[]> {
   const stateMap: Record<string, string> = {
     JOB_STATE_SUCCEEDED: 'succeeded',
@@ -123,7 +124,7 @@ export async function listBatches(): Promise<{
     JOB_STATE_PENDING: 'running',
   };
 
-  const result: { name: string; state: string; displayName: string; createTime: string }[] = [];
+  const result: { name: string; state: string; displayName: string; createTime: string; updateTime: string }[] = [];
   const pager = await ai.batches.list({ config: { pageSize: 100 } });
   for await (const batch of pager) {
     const dn = batch.displayName ?? '';
@@ -133,6 +134,7 @@ export async function listBatches(): Promise<{
       state: stateMap[batch.state ?? ''] ?? 'unknown',
       displayName: dn,
       createTime: (batch as any).createTime ?? '',
+      endTime: (batch as any).endTime ?? '',
     });
   }
   return result;
