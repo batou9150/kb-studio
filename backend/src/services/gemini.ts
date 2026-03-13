@@ -1,12 +1,25 @@
-import { GoogleGenAI } from '@google/genai';
-import { getKbMetadata, updateKbEntry, bulkUpdateKbEntries, pathFromUri } from './storage';
-import { Storage } from '@google-cloud/storage';
+import { GoogleGenAI, createPartFromUri } from '@google/genai';
+import { GoogleAuth } from 'google-auth-library';
+import { getKbMetadata, updateKbEntry, bulkUpdateKbEntries } from './storage';
 import type { KbEntry } from './storage';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const MODEL = 'gemini-3.1-flash-lite-preview';
 
-const storage = new Storage();
+const AUTH_SCOPES = [
+  'https://www.googleapis.com/auth/cloud-platform',
+  'https://www.googleapis.com/auth/generative-language',
+];
+
+function createAuth(): GoogleAuth {
+  const keyFile = process.env.SERVICE_ACCOUNT_FILE;
+  if (keyFile) {
+    return new GoogleAuth({ keyFile, scopes: AUTH_SCOPES });
+  }
+  return new GoogleAuth({ scopes: AUTH_SCOPES });
+}
+
+const auth = createAuth();
 
 const ANALYSIS_PROMPT = `Analyze this document and return ONLY a JSON object with:
 - "description": short description (1-2 sentences, in French)
@@ -32,12 +45,6 @@ const ANALYSIS_PROMPT = `Analyze this document and return ONLY a JSON object wit
 
 Return ONLY valid JSON, no markdown, no explanation.`;
 
-async function downloadFileAsBuffer(bucketName: string, entry: KbEntry): Promise<Buffer> {
-  const filePath = pathFromUri(entry.content.uri);
-  const [content] = await storage.bucket(bucketName).file(filePath).download();
-  return content;
-}
-
 function parseAnalysisResponse(text: string): { description: string; value_date: string; category: string } {
   // Strip markdown code fences if present
   const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
@@ -50,8 +57,8 @@ function parseAnalysisResponse(text: string): { description: string; value_date:
 }
 
 export async function analyzeFile(bucketName: string, entry: KbEntry): Promise<{ description: string; value_date: string; category: string }> {
-  const buffer = await downloadFileAsBuffer(bucketName, entry);
-  const base64Data = buffer.toString('base64');
+  const registered = await ai.files.registerFiles({ auth, uris: [entry.content.uri] });
+  const fileUri = registered.files?.[0]?.uri ?? entry.content.uri;
 
   const response = await ai.models.generateContent({
     model: MODEL,
@@ -59,7 +66,7 @@ export async function analyzeFile(bucketName: string, entry: KbEntry): Promise<{
       {
         role: 'user',
         parts: [
-          { inlineData: { mimeType: entry.content.mimeType, data: base64Data } },
+          createPartFromUri(fileUri, entry.content.mimeType),
           { text: ANALYSIS_PROMPT },
         ],
       },
@@ -76,28 +83,26 @@ export async function startBatchAnalysis(bucketName: string): Promise<{ batchNam
     throw new Error('No files to analyze');
   }
 
-  const inlineRequests = [];
-  for (const entry of entries) {
-    const buffer = await downloadFileAsBuffer(bucketName, entry);
-    const base64Data = buffer.toString('base64');
+  const uris = entries.map((e) => e.content.uri);
+  const registered = await ai.files.registerFiles({ auth, uris });
+  const registeredFiles = registered.files ?? [];
 
-    inlineRequests.push({
-      contents: [
-        {
-          role: 'user' as const,
-          parts: [
-            { inlineData: { mimeType: entry.content.mimeType, data: base64Data } },
-            { text: ANALYSIS_PROMPT },
-          ],
-        },
-      ],
-      metadata: { id: entry.id },
-    });
-  }
+  const requests = entries.map((entry, i) => ({
+    contents: [
+      {
+        role: 'user' as const,
+        parts: [
+          createPartFromUri(registeredFiles[i]?.uri ?? entry.content.uri, entry.content.mimeType),
+          { text: ANALYSIS_PROMPT },
+        ],
+      },
+    ],
+    metadata: { id: entry.id },
+  }));
 
   const batch = await ai.batches.create({
     model: MODEL,
-    src: inlineRequests,
+    src: requests,
     config: {
       displayName: `kb-studio-analysis-${Date.now()}`,
     },

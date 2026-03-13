@@ -77,6 +77,7 @@ Edit `backend/.env`:
 | `GCS_BUCKET_NAME` | GCS bucket name(s), comma-separated for multi-bucket | — |
 | `GOOGLE_CLOUD_PROJECT` | Google Cloud project ID | — |
 | `GEMINI_API_KEY` | Gemini API key | — |
+| `SERVICE_ACCOUNT_FILE` | Path to service account key JSON for GCS auth (optional, uses ADC if unset) | — |
 | `APP_NAME` | Custom application name (optional) | `KB-Studio` |
 | `APP_LOGO` | Custom logo URL (optional) | — |
 
@@ -131,6 +132,7 @@ The application is accessible at `http://localhost:8080`.
 | `GCS_BUCKET_NAME` | GCS bucket name(s), comma-separated for multi-bucket | `kb-studio-bucket` |
 | `GOOGLE_CLOUD_PROJECT` | Google Cloud project ID | — |
 | `GEMINI_API_KEY` | Gemini API key | — |
+| `SERVICE_ACCOUNT_FILE` | Path to service account key JSON for GCS auth | — |
 | `APP_NAME` | Custom application name | `KB-Studio` |
 | `APP_LOGO` | Custom logo URL | — |
 
