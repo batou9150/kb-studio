@@ -78,7 +78,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ bucketNames, selectedB
       const res = await api.listDataStoreDocuments(ds.dataStoreId, ds.location, 20, token ?? undefined);
       setDocuments(prev => append ? [...prev, ...res.documents] : res.documents);
       setNextPageToken(res.nextPageToken);
-    } catch {}
+    } catch { }
   }, [ds.dataStoreId, ds.location, nextPageToken]);
 
   const fetchImportHistory = useCallback(async () => {
@@ -646,21 +646,23 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ bucketNames, selectedB
 
       {/* Danger zone */}
       {!showCreateForm && status?.exists && (
-        <div className="danger-zone">
-          <div className="danger-zone-header">
-            <AlertTriangle size={20} />
-            <h3>{t('dangerZone')}</h3>
-          </div>
-          <p>{t('dangerZoneDesc')}</p>
-          <div style={{ display: 'flex', gap: 12 }}>
-            <button className="btn btn-danger" onClick={handlePurge} disabled={isActionLoading}>
-              {actionLoading === 'purge' ? <Loader size={16} className="spinner" /> : <BrushCleaning size={16} />}
-              {actionLoading === 'purge' ? t('purging') : t('purgeAll')}
-            </button>
-            <button className="btn btn-danger" onClick={handleDeleteDataStore} disabled={isActionLoading}>
-              {actionLoading === 'delete' ? <Loader size={16} className="spinner" /> : <Trash2 size={16} />}
-              {actionLoading === 'delete' ? t('deleting') : t('deleteDatastore')}
-            </button>
+        <div className="vais-section">
+          <div className="danger-zone">
+            <div className="danger-zone-header">
+              <AlertTriangle size={20} />
+              <h3>{t('dangerZone')}</h3>
+            </div>
+            <p>{t('dangerZoneDesc')}</p>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button className="btn btn-danger" onClick={handlePurge} disabled={isActionLoading}>
+                {actionLoading === 'purge' ? <Loader size={16} className="spinner" /> : <BrushCleaning size={16} />}
+                {actionLoading === 'purge' ? t('purging') : t('purgeAll')}
+              </button>
+              <button className="btn btn-danger" onClick={handleDeleteDataStore} disabled={isActionLoading}>
+                {actionLoading === 'delete' ? <Loader size={16} className="spinner" /> : <Trash2 size={16} />}
+                {actionLoading === 'delete' ? t('deleting') : t('deleteDatastore')}
+              </button>
+            </div>
           </div>
         </div>
       )}

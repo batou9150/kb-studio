@@ -37,7 +37,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ folders, onDataChanged, 
   const [loadingDetails, setLoadingDetails] = useState<string | null>(null);
 
   useEffect(() => {
-    api.getAnalyzeHistory().then(setBatches).catch(() => {});
+    api.getAnalyzeHistory().then(setBatches).catch(() => { });
   }, []);
 
   const handleCreateFolder = async () => {
@@ -254,16 +254,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ folders, onDataChanged, 
         </table>
       </div>
 
-      <div className="danger-zone">
-        <div className="danger-zone-header">
-          <AlertTriangle size={20} />
-          <h3>{t('dangerZone')}</h3>
+      <div className="vais-section">
+        <div className="danger-zone">
+          <div className="danger-zone-header">
+            <AlertTriangle size={20} />
+            <h3>{t('dangerZone')}</h3>
+          </div>
+          <p>{t('dangerZoneDesc')}</p>
+          <button className="btn btn-danger" onClick={handleDeleteAll} disabled={loading}>
+            {loading ? <Loader size={16} className="spinner" /> : <Trash2 size={16} />}
+            {loading ? t('deletingAll') : t('deleteAll')}
+          </button>
         </div>
-        <p>{t('dangerZoneDesc')}</p>
-        <button className="btn btn-danger" onClick={handleDeleteAll} disabled={loading}>
-          {loading ? <Loader size={16} className="spinner" /> : <Trash2 size={16} />}
-          {loading ? t('deletingAll') : t('deleteAll')}
-        </button>
       </div>
     </div>
   );
