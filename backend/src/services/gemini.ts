@@ -83,9 +83,15 @@ export async function startBatchAnalysis(bucketName: string): Promise<{ batchNam
     throw new Error('No files to analyze');
   }
 
+  // Register files in batches of 100 (API limit)
+  const REGISTER_BATCH_SIZE = 100;
   const uris = entries.map((e) => e.content.uri);
-  const registered = await ai.files.registerFiles({ auth, uris });
-  const registeredFiles = registered.files ?? [];
+  const registeredFiles: { uri?: string }[] = [];
+  for (let i = 0; i < uris.length; i += REGISTER_BATCH_SIZE) {
+    const chunk = uris.slice(i, i + REGISTER_BATCH_SIZE);
+    const registered = await ai.files.registerFiles({ auth: auth, uris: chunk });
+    registeredFiles.push(...(registered.files ?? []));
+  }
 
   const requests = entries.map((entry, i) => ({
     contents: [
