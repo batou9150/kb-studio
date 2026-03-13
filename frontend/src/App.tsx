@@ -58,12 +58,14 @@ function App() {
     if (!selectedBucket) return;
     setLoading(true);
     try {
-      const [foldersData, filesData] = await Promise.all([
+      const [foldersData, filesData, allFilesData] = await Promise.all([
         api.getFolders(),
-        api.getFiles(currentFolder, searchQuery)
+        api.getFiles(currentFolder, searchQuery),
+        api.getFiles(),
       ]);
       setFolders(foldersData);
       setFiles(filesData);
+      setAllFiles(allFilesData);
     } catch (error) {
       console.error('Error loading data:', error);
       alert(t('error.loadData'));
@@ -101,11 +103,13 @@ function App() {
     }
   }, [files, selectedFile]);
 
-  // Fetch all files (unfiltered) when insights view is active
-  useEffect(() => {
-    if (currentView !== 'insights' || !selectedBucket) return;
+  // Fetch all files (unfiltered) for total count and insights
+  const loadAllFiles = useCallback(() => {
+    if (!selectedBucket) return;
     api.getFiles().then(setAllFiles).catch(console.error);
-  }, [currentView, selectedBucket]);
+  }, [selectedBucket]);
+
+  useEffect(() => { loadAllFiles(); }, [loadAllFiles]);
 
   const handleBucketChange = (bucket: string) => {
     setSelectedBucket(bucket);
@@ -369,6 +373,7 @@ function App() {
               onBucketChange={handleBucketChange}
               projectId={projectId}
               onRefresh={loadData}
+              totalFileCount={allFiles.length}
               sidebar={
                 <Sidebar
                   folders={folders}
