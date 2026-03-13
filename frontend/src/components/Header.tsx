@@ -1,17 +1,29 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Database, FolderOpen, TableOfContents, Search, Settings, BarChart3 } from 'lucide-react';
 
+type ViewType = 'explorer' | 'admin' | 'index' | 'answer' | 'insights';
+
+const pathToView: Record<string, ViewType> = {
+  '/': 'explorer',
+  '/insights': 'insights',
+  '/index': 'index',
+  '/search': 'answer',
+  '/admin': 'admin',
+};
+
 interface HeaderProps {
-  currentView: 'explorer' | 'admin' | 'index' | 'answer' | 'insights';
   onNavigate: (folderId: string) => void;
-  onViewChange: (view: 'explorer' | 'admin' | 'index' | 'answer' | 'insights') => void;
   appName: string;
   appLogo: string;
 }
 
-export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, onViewChange, appName, appLogo }) => {
+export const Header: React.FC<HeaderProps> = ({ onNavigate, appName, appLogo }) => {
   const { t, i18n } = useTranslation('explorer');
+  const navigate = useNavigate();
+  const location = useLocation();
+  const currentView = pathToView[location.pathname] || 'explorer';
 
   const changeLanguage = (lng: string) => {
     i18n.changeLanguage(lng);
@@ -22,7 +34,7 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, onViewC
   return (
     <header className="header">
       <div className="header-left">
-        <div className="logo" style={{ cursor: 'pointer' }} onClick={() => { onNavigate(''); onViewChange('explorer'); }}>
+        <div className="logo" style={{ cursor: 'pointer' }} onClick={() => { onNavigate(''); navigate('/'); }}>
           {appLogo ? (
             <img src={appLogo} alt="" style={{ height: 24 }} />
           ) : (
@@ -35,35 +47,35 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, onViewC
       <nav className="header-tabs">
         <button
           className={`header-tab ${currentView === 'explorer' ? 'active' : ''}`}
-          onClick={() => { onNavigate(''); onViewChange('explorer'); }}
+          onClick={() => { onNavigate(''); navigate('/'); }}
         >
           <FolderOpen size={16} />
           {t('nav.knowledgeBase')}
         </button>
         <button
           className={`header-tab ${currentView === 'insights' ? 'active' : ''}`}
-          onClick={() => onViewChange('insights')}
+          onClick={() => navigate('/insights')}
         >
           <BarChart3 size={16} />
           {t('nav.insights')}
         </button>
         <button
           className={`header-tab ${currentView === 'index' ? 'active' : ''}`}
-          onClick={() => onViewChange('index')}
+          onClick={() => navigate('/index')}
         >
           <TableOfContents size={16} />
           {t('nav.indexation')}
         </button>
         <button
           className={`header-tab ${currentView === 'answer' ? 'active' : ''}`}
-          onClick={() => onViewChange('answer')}
+          onClick={() => navigate('/search')}
         >
           <Search size={16} />
           {t('nav.search')}
         </button>
         <button
           className={`header-tab ${currentView === 'admin' ? 'active' : ''}`}
-          onClick={() => onViewChange('admin')}
+          onClick={() => navigate('/admin')}
         >
           <Settings size={16} />
           {t('nav.admin')}
