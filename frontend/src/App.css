@@ -10,7 +10,7 @@
   --danger-hover: #dc2626;
   --success-color: #10b981;
   --warning-color: #f59e0b;
-  
+
   --sidebar-width: 250px;
   --panel-width: 350px;
   --header-height: 60px;
@@ -377,7 +377,7 @@ body {
   background-color: var(--surface-color);
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .file-table th,
@@ -469,7 +469,7 @@ body {
   top: 0;
   bottom: 0;
   z-index: 10;
-  box-shadow: -4px 0 15px rgba(0,0,0,0.05);
+  box-shadow: -4px 0 15px rgba(0, 0, 0, 0.05);
 }
 
 .details-panel.open {
@@ -577,7 +577,9 @@ textarea.form-control {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .spinner {
@@ -819,6 +821,10 @@ textarea.form-control {
   margin-right: auto;
 }
 
+.vais-section:last-child {
+  padding-bottom: 32px;
+}
+
 .vais-section-header {
   display: flex;
   justify-content: space-between;
@@ -933,7 +939,8 @@ textarea.form-control {
   margin-bottom: 0;
 }
 
-.answer-text ul, .answer-text ol {
+.answer-text ul,
+.answer-text ol {
   margin: 0 0 12px;
   padding-left: 24px;
 }
