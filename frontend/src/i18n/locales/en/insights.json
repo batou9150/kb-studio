@@ -4,5 +4,8 @@
   "byCategory": "Breakdown by category",
   "category": "Category",
   "count": "Count",
-  "noCategory": "Uncategorized"
+  "noCategory": "Uncategorized",
+  "byFileType": "Breakdown by file type",
+  "fileType": "File type",
+  "noFileType": "No extension"
 }

@@ -33,6 +33,19 @@ export const InsightsPanel: React.FC<InsightsPanelProps> = ({
       .sort((a, b) => b.count - a.count);
   }, [files]);
 
+  const fileTypeBreakdown = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const file of files) {
+      const ext = file.name.includes('.') ? file.name.substring(file.name.lastIndexOf('.') + 1).toLowerCase() : t('noFileType');
+      counts.set(ext, (counts.get(ext) || 0) + 1);
+    }
+    return Array.from(counts.entries())
+      .map(([fileType, count]) => ({ fileType, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [files, t]);
+
+  const pct = (count: number) => files.length ? `${((count / files.length) * 100).toFixed(1)}%` : '0%';
+
   const getCategoryLabel = (category: string): string => {
     if (!category) return t('noCategory');
     const key = `categories.${category}`;
@@ -73,6 +86,7 @@ export const InsightsPanel: React.FC<InsightsPanelProps> = ({
             <tr>
               <th>{t('category')}</th>
               <th>{t('count')}</th>
+              <th>%</th>
             </tr>
           </thead>
           <tbody>
@@ -80,6 +94,31 @@ export const InsightsPanel: React.FC<InsightsPanelProps> = ({
               <tr key={category}>
                 <td>{getCategoryLabel(category)}</td>
                 <td>{count}</td>
+                <td>{pct(count)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="vais-section">
+        <div className="vais-section-header">
+          <h2>{t('byFileType')}</h2>
+        </div>
+        <table className="file-table">
+          <thead>
+            <tr>
+              <th>{t('fileType')}</th>
+              <th>{t('count')}</th>
+              <th>%</th>
+            </tr>
+          </thead>
+          <tbody>
+            {fileTypeBreakdown.map(({ fileType, count }) => (
+              <tr key={fileType}>
+                <td>{fileType}</td>
+                <td>{count}</td>
+                <td>{pct(count)}</td>
               </tr>
             ))}
           </tbody>

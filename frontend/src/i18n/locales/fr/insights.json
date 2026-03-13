@@ -4,5 +4,8 @@
   "byCategory": "Répartition par catégorie",
   "category": "Catégorie",
   "count": "Nombre",
-  "noCategory": "Non catégorisé"
+  "noCategory": "Non catégorisé",
+  "byFileType": "Répartition par type de fichier",
+  "fileType": "Type de fichier",
+  "noFileType": "Sans extension"
 }
