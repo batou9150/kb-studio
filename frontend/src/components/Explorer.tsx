@@ -23,12 +23,13 @@ interface ExplorerProps {
   onBucketChange: (bucket: string) => void;
   projectId: string;
   onRefresh: () => void;
+  totalFileCount: number;
   sidebar?: React.ReactNode;
   detailsPanel?: React.ReactNode;
 }
 
 export const Explorer: React.FC<ExplorerProps> = ({
-  files, selectedFile, onSelectFile, onUpload, onDeleteFile, onDownloadFile, onRenameFile, onSearch, onAnalyzeAll, analyzeProgress, bucketNames, selectedBucket, onBucketChange, projectId, onRefresh, sidebar, detailsPanel
+  files, selectedFile, onSelectFile, onUpload, onDeleteFile, onDownloadFile, onRenameFile, onSearch, onAnalyzeAll, analyzeProgress, bucketNames, selectedBucket, onBucketChange, projectId, onRefresh, totalFileCount, sidebar, detailsPanel
 }) => {
   const { t } = useTranslation('explorer');
   const tc = useTranslation('common').t;
@@ -93,6 +94,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
             projectId={projectId}
             gcsConsoleTitle={tc('viewInConsole')}
           />
+          <span className="file-count">{totalFileCount} files</span>
         </div>
         <div className="explorer-toolbar-center">
           <div className="search-bar">
@@ -114,8 +116,8 @@ export const Explorer: React.FC<ExplorerProps> = ({
             {analyzeProgress ? <Loader size={16} className="spinner" /> : <Sparkles size={16} />}
             {analyzeProgress?.state === 'preparing' ? t('analyzePreparing')
               : analyzeProgress?.state === 'starting' ? t('analyzeStarting')
-              : analyzeProgress?.state === 'running' ? t('analyzeRunning', { done: analyzeProgress.done, total: analyzeProgress.total })
-              : t('analyzeAll')}
+                : analyzeProgress?.state === 'running' ? t('analyzeRunning', { done: analyzeProgress.done, total: analyzeProgress.total })
+                  : t('analyzeAll')}
           </button>
           <div className="upload-dropdown">
             <button className="btn btn-outline" onClick={() => setUploadMenuOpen(!uploadMenuOpen)}>
@@ -178,105 +180,108 @@ export const Explorer: React.FC<ExplorerProps> = ({
       <div className="explorer-body">
         {sidebar}
         <div className="explorer-content">
-        {isDragActive && !internalDrag && (
-          <div className="dropzone active">
-            <Upload size={32} />
-            <p style={{ marginTop: '12px', fontWeight: 500 }}>{t('dropFiles')}</p>
-          </div>
-        )}
+          {isDragActive && !internalDrag && (
+            <div className="dropzone active">
+              <Upload size={32} />
+              <p style={{ marginTop: '12px', fontWeight: 500 }}>{t('dropFiles')}</p>
+            </div>
+          )}
 
-        {!isDragActive && !internalDrag && files.length === 0 ? (
-          <div className="empty-state">
-            <FolderPlus size={48} />
-            <h3>{t('emptyFolder')}</h3>
-            <p>{t('emptyFolderHint')}</p>
-          </div>
-        ) : (
-          <table className="file-table">
-            <thead>
-              <tr>
-                <th>{tc('colFolder')}</th>
-                <th>{tc('colName')}</th>
-                <th>{t('colModified')}</th>
-                <th style={{ width: '80px' }}>{tc('colActions')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {files.map(file => (
-                <tr
-                  key={file.id}
-                  className={`file-row ${selectedFile?.id === file.id ? 'selected' : ''}`}
-                  onClick={() => onSelectFile(file)}
-                  draggable
-                  onDragStart={(e) => {
-                    e.dataTransfer.setData('application/kb-file-id', file.id);
-                    e.dataTransfer.effectAllowed = 'move';
-                    setInternalDrag(true);
-                  }}
-                  onDragEnd={() => setInternalDrag(false)}
-                >
-                  <td>
-                    <div className="file-name-cell">
-                      <Folder size={18} color="var(--text-secondary)" />
-                      {file.path.includes('/') ? file.path.substring(0, file.path.lastIndexOf('/')) : '/'}
-                    </div>
-                  </td>
-                  <td>
-                    <div className="file-name-cell" onClick={(e) => editingId === file.id && e.stopPropagation()}>
-                      {getFileIcon(file.contentType)}
-                      {editingId === file.id ? (
-                        <>
-                          <input
-                            className="form-control"
-                            style={{ padding: '2px 8px', fontSize: '0.9rem', flex: 1 }}
-                            value={editingName}
-                            onChange={(e) => setEditingName(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') confirmEditing(file);
-                              else if (e.key === 'Escape') cancelEditing();
-                            }}
-                            autoFocus
-                          />
-                          <button className="icon-btn" title={tc('confirm')} onClick={(e) => { e.stopPropagation(); confirmEditing(file); }}>
-                            <Check size={14} />
-                          </button>
-                          <button className="icon-btn" title={tc('cancel')} onClick={(e) => { e.stopPropagation(); cancelEditing(); }}>
-                            <X size={14} />
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          {file.name}
-                          <button
-                            className="icon-btn"
-                            title={tc('rename')}
-                            onClick={(e) => { e.stopPropagation(); startEditing(file); }}
-                          >
-                            <Pencil size={14} />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                  <td>{format(new Date(file.updated), 'dd/MM/yyyy')}</td>
-                  <td>
-                    <div className="file-actions" onClick={(e) => e.stopPropagation()}>
-                      <button className="icon-btn" onClick={() => onSelectFile(file)} title={tc('viewMetadata')}>
-                        <Eye size={16} />
-                      </button>
-                      <button className="icon-btn" onClick={() => onDownloadFile(file.id)} title={tc('download')}>
-                        <Download size={16} />
-                      </button>
-                      <button className="icon-btn danger" onClick={() => onDeleteFile(file.id)} title={tc('delete')}>
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </td>
+          {!isDragActive && !internalDrag && files.length === 0 ? (
+            <div className="empty-state">
+              <FolderPlus size={48} />
+              <h3>{t('emptyFolder')}</h3>
+              <p>{t('emptyFolderHint')}</p>
+            </div>
+          ) : (
+            <table className="file-table">
+              <thead>
+                <tr>
+                  <th>{tc('colFolder')}</th>
+                  <th>{tc('colName')}</th>
+                  <th>{t('colModified')}</th>
+                  <th style={{ width: '80px' }}>{tc('colActions')}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+              </thead>
+              <tbody>
+                {files.map(file => (
+                  <tr
+                    key={file.id}
+                    className={`file-row ${selectedFile?.id === file.id ? 'selected' : ''}`}
+                    onClick={() => onSelectFile(file)}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('application/kb-file-id', file.id);
+                      e.dataTransfer.effectAllowed = 'move';
+                      setInternalDrag(true);
+                    }}
+                    onDragEnd={() => setInternalDrag(false)}
+                  >
+                    <td>
+                      <div className="file-name-cell">
+                        <Folder size={18} color="var(--text-secondary)" />
+                        {file.path.includes('/') ? file.path.substring(0, file.path.lastIndexOf('/')) : '/'}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="file-name-cell" onClick={(e) => editingId === file.id && e.stopPropagation()}>
+                        {getFileIcon(file.contentType)}
+                        {editingId === file.id ? (
+                          <>
+                            <input
+                              className="form-control"
+                              style={{ padding: '2px 8px', fontSize: '0.9rem', flex: 1 }}
+                              value={editingName}
+                              onChange={(e) => setEditingName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') confirmEditing(file);
+                                else if (e.key === 'Escape') cancelEditing();
+                              }}
+                              autoFocus
+                            />
+                            <button className="icon-btn" title={tc('confirm')} onClick={(e) => { e.stopPropagation(); confirmEditing(file); }}>
+                              <Check size={14} />
+                            </button>
+                            <button className="icon-btn" title={tc('cancel')} onClick={(e) => { e.stopPropagation(); cancelEditing(); }}>
+                              <X size={14} />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            {file.name}
+                            <button
+                              className="icon-btn"
+                              title={tc('rename')}
+                              onClick={(e) => { e.stopPropagation(); startEditing(file); }}
+                            >
+                              <Pencil size={14} />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                    <td>{format(new Date(file.updated), 'dd/MM/yyyy')}</td>
+                    <td>
+                      <div className="file-actions" onClick={(e) => e.stopPropagation()}>
+                        <button className="icon-btn" onClick={() => onSelectFile(file)} title={tc('viewMetadata')}>
+                          <Eye size={16} />
+                        </button>
+                        <button className="icon-btn" onClick={() => onDownloadFile(file.id)} title={tc('download')}>
+                          <Download size={16} />
+                        </button>
+                        <button className="icon-btn danger" onClick={() => onDeleteFile(file.id)} title={tc('delete')}>
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          <div className="file-count-bar">
+            {files.length} / {totalFileCount}
+          </div>
         </div>
         {detailsPanel}
       </div>

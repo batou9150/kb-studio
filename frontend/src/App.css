@@ -205,6 +205,19 @@ body {
   text-overflow: ellipsis;
 }
 
+.file-count {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.file-count-bar {
+  text-align: right;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  padding: 8px 12px;
+}
+
 .bucket-select {
   font-weight: 600;
   font-size: 0.95rem;
