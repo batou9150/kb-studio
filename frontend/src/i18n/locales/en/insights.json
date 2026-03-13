@@ -7,5 +7,10 @@
   "noCategory": "Uncategorized",
   "byFileType": "Breakdown by file type",
   "fileType": "File type",
-  "noFileType": "No extension"
+  "noFileType": "No extension",
+  "duplicates": "Potential duplicates",
+  "duplicateFiles": "Files",
+  "duplicateReason": "Reason",
+  "noDuplicates": "No potential duplicates found",
+  "detectError": "Error detecting duplicates"
 }
