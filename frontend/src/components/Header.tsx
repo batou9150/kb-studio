@@ -1,11 +1,11 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Database, FolderOpen, TableOfContents, Search, Settings } from 'lucide-react';
+import { Database, FolderOpen, TableOfContents, Search, Settings, BarChart3 } from 'lucide-react';
 
 interface HeaderProps {
-  currentView: 'explorer' | 'admin' | 'index' | 'answer';
+  currentView: 'explorer' | 'admin' | 'index' | 'answer' | 'insights';
   onNavigate: (folderId: string) => void;
-  onViewChange: (view: 'explorer' | 'admin' | 'index' | 'answer') => void;
+  onViewChange: (view: 'explorer' | 'admin' | 'index' | 'answer' | 'insights') => void;
   appName: string;
   appLogo: string;
 }
@@ -39,6 +39,13 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, onViewC
         >
           <FolderOpen size={16} />
           {t('nav.knowledgeBase')}
+        </button>
+        <button
+          className={`header-tab ${currentView === 'insights' ? 'active' : ''}`}
+          onClick={() => onViewChange('insights')}
+        >
+          <BarChart3 size={16} />
+          {t('nav.insights')}
         </button>
         <button
           className={`header-tab ${currentView === 'index' ? 'active' : ''}`}

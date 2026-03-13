@@ -12,6 +12,7 @@ import { AnalyzeResultsDialog } from './components/AnalyzeResultsDialog';
 import { AdminPanel } from './components/AdminPanel';
 import { SearchPanel } from './components/SearchPanel';
 import { AnswerPanel } from './components/AnswerPanel';
+import { InsightsPanel } from './components/InsightsPanel';
 import { Loader } from 'lucide-react';
 
 function App() {
@@ -26,7 +27,8 @@ function App() {
   const [appName, setAppName] = useState('KB-Studio');
   const [appLogo, setAppLogo] = useState('');
 
-  const [currentView, setCurrentView] = useState<'explorer' | 'admin' | 'index' | 'answer'>('explorer');
+  const [currentView, setCurrentView] = useState<'explorer' | 'admin' | 'index' | 'answer' | 'insights'>('explorer');
+  const [allFiles, setAllFiles] = useState<FileItem[]>([]);
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -98,6 +100,12 @@ function App() {
       }
     }
   }, [files, selectedFile]);
+
+  // Fetch all files (unfiltered) when insights view is active
+  useEffect(() => {
+    if (currentView !== 'insights' || !selectedBucket) return;
+    api.getFiles().then(setAllFiles).catch(console.error);
+  }, [currentView, selectedBucket]);
 
   const handleBucketChange = (bucket: string) => {
     setSelectedBucket(bucket);
@@ -329,6 +337,10 @@ function App() {
       ) : currentView === 'index' ? (
         <div className="main-content scrollable">
           <SearchPanel bucketNames={bucketNames} selectedBucket={selectedBucket} onBucketChange={handleBucketChange} projectId={projectId} />
+        </div>
+      ) : currentView === 'insights' ? (
+        <div className="main-content scrollable">
+          <InsightsPanel files={allFiles} bucketNames={bucketNames} selectedBucket={selectedBucket} onBucketChange={handleBucketChange} projectId={projectId} />
         </div>
       ) : currentView === 'answer' ? (
         <div className="main-content scrollable">
