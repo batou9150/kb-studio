@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { Routes, Route } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import './App.css';
 import { api, setCurrentBucket } from './api';
@@ -27,7 +28,6 @@ function App() {
   const [appName, setAppName] = useState('KB-Studio');
   const [appLogo, setAppLogo] = useState('');
 
-  const [currentView, setCurrentView] = useState<'explorer' | 'admin' | 'index' | 'answer' | 'insights'>('explorer');
   const [allFiles, setAllFiles] = useState<FileItem[]>([]);
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
@@ -327,76 +327,80 @@ function App() {
       )}
 
       <Header
-        currentView={currentView}
         onNavigate={handleSelectFolder}
-        onViewChange={setCurrentView}
         appName={appName}
         appLogo={appLogo}
       />
 
-      {currentView === 'admin' ? (
-        <div className="main-content scrollable">
-          <AdminPanel folders={folders} onDataChanged={loadData} bucketNames={bucketNames} selectedBucket={selectedBucket} onBucketChange={handleBucketChange} projectId={projectId} />
-        </div>
-      ) : currentView === 'index' ? (
-        <div className="main-content scrollable">
-          <SearchPanel bucketNames={bucketNames} selectedBucket={selectedBucket} onBucketChange={handleBucketChange} projectId={projectId} />
-        </div>
-      ) : currentView === 'insights' ? (
-        <div className="main-content scrollable">
-          <InsightsPanel files={allFiles} bucketNames={bucketNames} selectedBucket={selectedBucket} onBucketChange={handleBucketChange} projectId={projectId} />
-        </div>
-      ) : currentView === 'answer' ? (
-        <div className="main-content scrollable">
-          <AnswerPanel projectId={projectId} />
-        </div>
-      ) : (
-        <div className="main-content">
-          {loading && files.length === 0 ? (
-            <div className="explorer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Loader className="spinner" size={48} color="var(--primary-color)" />
-            </div>
-          ) : (
-            <Explorer
-              files={files}
-              selectedFile={selectedFile}
-              onSelectFile={handleSelectFile}
-              onUpload={handleUpload}
-              onDeleteFile={handleDeleteFile}
-              onDownloadFile={handleDownloadFile}
-              onRenameFile={handleRenameFile}
-              onSearch={setSearchQuery}
-              onAnalyzeAll={handleAnalyzeAll}
-              analyzeProgress={analyzeProgress}
-              bucketNames={bucketNames}
-              selectedBucket={selectedBucket}
-              onBucketChange={handleBucketChange}
-              projectId={projectId}
-              onRefresh={loadData}
-              totalFileCount={allFiles.length}
-              sidebar={
-                <Sidebar
-                  folders={folders}
-                  currentFolder={currentFolder}
-                  onSelectFolder={handleSelectFolder}
-                  onMoveFile={handleMoveFile}
-                  onUploadToFolder={handleUploadToFolder}
-                  onCreateFolder={handleCreateFolder}
-                />
-              }
-              detailsPanel={
-                <DetailsPanel
-                  file={selectedFile}
-                  isOpen={isPanelOpen}
-                  onClose={() => setIsPanelOpen(false)}
-                  onUpdateMetadata={handleUpdateMetadata}
-                  onRenameFile={handleRenameFile}
-                />
-              }
-            />
-          )}
-        </div>
-      )}
+      <Routes>
+        <Route path="/" element={
+          <div className="main-content">
+            {loading && files.length === 0 ? (
+              <div className="explorer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Loader className="spinner" size={48} color="var(--primary-color)" />
+              </div>
+            ) : (
+              <Explorer
+                files={files}
+                selectedFile={selectedFile}
+                onSelectFile={handleSelectFile}
+                onUpload={handleUpload}
+                onDeleteFile={handleDeleteFile}
+                onDownloadFile={handleDownloadFile}
+                onRenameFile={handleRenameFile}
+                onSearch={setSearchQuery}
+                onAnalyzeAll={handleAnalyzeAll}
+                analyzeProgress={analyzeProgress}
+                bucketNames={bucketNames}
+                selectedBucket={selectedBucket}
+                onBucketChange={handleBucketChange}
+                projectId={projectId}
+                onRefresh={loadData}
+                totalFileCount={allFiles.length}
+                sidebar={
+                  <Sidebar
+                    folders={folders}
+                    currentFolder={currentFolder}
+                    onSelectFolder={handleSelectFolder}
+                    onMoveFile={handleMoveFile}
+                    onUploadToFolder={handleUploadToFolder}
+                    onCreateFolder={handleCreateFolder}
+                  />
+                }
+                detailsPanel={
+                  <DetailsPanel
+                    file={selectedFile}
+                    isOpen={isPanelOpen}
+                    onClose={() => setIsPanelOpen(false)}
+                    onUpdateMetadata={handleUpdateMetadata}
+                    onRenameFile={handleRenameFile}
+                  />
+                }
+              />
+            )}
+          </div>
+        } />
+        <Route path="/insights" element={
+          <div className="main-content scrollable">
+            <InsightsPanel files={allFiles} bucketNames={bucketNames} selectedBucket={selectedBucket} onBucketChange={handleBucketChange} projectId={projectId} />
+          </div>
+        } />
+        <Route path="/index" element={
+          <div className="main-content scrollable">
+            <SearchPanel bucketNames={bucketNames} selectedBucket={selectedBucket} onBucketChange={handleBucketChange} projectId={projectId} />
+          </div>
+        } />
+        <Route path="/search" element={
+          <div className="main-content scrollable">
+            <AnswerPanel projectId={projectId} />
+          </div>
+        } />
+        <Route path="/admin" element={
+          <div className="main-content scrollable">
+            <AdminPanel folders={folders} onDataChanged={loadData} bucketNames={bucketNames} selectedBucket={selectedBucket} onBucketChange={handleBucketChange} projectId={projectId} />
+          </div>
+        } />
+      </Routes>
     </div>
   );
 }
