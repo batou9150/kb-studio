@@ -212,6 +212,43 @@ export async function getBatchAnalysisDetails(batchName: string): Promise<{
   return { results, failed };
 }
 
+export async function detectDuplicates(entries: KbEntry[], lang: string = 'fr'): Promise<{ ids: string[]; reason: string }[]> {
+  const jsonlLines = entries.map(e => JSON.stringify({
+    id: e.id,
+    name: e.structData.title,
+    description: e.structData.description,
+    value_date: e.structData.value_date,
+  }));
+  const jsonlContent = jsonlLines.join('\n');
+
+  const prompt = `You are a document deduplication assistant. Below is a list of files in JSONL format (one JSON object per line with fields: id, name, description, value_date).
+
+value_date is the most relevant date associated with the document (e.g. the date the document refers to, not the upload date). It can be empty if no date was found.
+
+Identify groups of files that are likely duplicates or near-duplicates based on similar filenames or similar descriptions. Only flag pairs with high confidence.
+
+Return ONLY a JSON array of duplicate groups. Each group is an object with:
+- "ids": array of file ids that are duplicates of each other
+- "reason": short explanation of why they are duplicates (in ${lang === 'fr' ? 'French' : 'English'})
+
+If no duplicates are found, return an empty array: []
+
+Return ONLY valid JSON, no markdown, no explanation.
+
+<files>
+${jsonlContent}
+</files>`;
+
+  const response = await ai.models.generateContent({
+    model: MODEL,
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+  });
+
+  const text = response.text ?? '';
+  const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+  return JSON.parse(cleaned);
+}
+
 export async function getBatchAnalysisStatus(bucketName: string, batchName: string): Promise<{
   state: string;
   succeededCount?: number;

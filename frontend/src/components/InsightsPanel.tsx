@@ -1,7 +1,12 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Loader, RefreshCw } from 'lucide-react';
 import type { FileItem } from '../types';
 import { BucketSelector } from './BucketSelector';
+import { api } from '../api';
+
+// Module-level cache: survives component unmount/remount (tab switches)
+const duplicatesCache = new Map<string, { ids: string[]; reason: string }[]>();
 
 interface InsightsPanelProps {
   files: FileItem[];
@@ -18,7 +23,7 @@ export const InsightsPanel: React.FC<InsightsPanelProps> = ({
   onBucketChange,
   projectId,
 }) => {
-  const { t } = useTranslation('insights');
+  const { t, i18n } = useTranslation('insights');
   const { t: tDetails } = useTranslation('details');
   const tc = useTranslation('common').t;
 
@@ -43,6 +48,38 @@ export const InsightsPanel: React.FC<InsightsPanelProps> = ({
       .map(([fileType, count]) => ({ fileType, count }))
       .sort((a, b) => b.count - a.count);
   }, [files, t]);
+
+  const cached = duplicatesCache.get(selectedBucket);
+  const [duplicateGroups, setDuplicateGroups] = useState<{ ids: string[]; reason: string }[] | null>(cached ?? null);
+  const [detectingDuplicates, setDetectingDuplicates] = useState(false);
+  const [duplicateError, setDuplicateError] = useState('');
+
+  const fetchDuplicates = async () => {
+    setDetectingDuplicates(true);
+    setDuplicateError('');
+    try {
+      const result = await api.detectDuplicates(i18n.language);
+      setDuplicateGroups(result.groups);
+      duplicatesCache.set(selectedBucket, result.groups);
+    } catch {
+      setDuplicateError(t('detectError'));
+    } finally {
+      setDetectingDuplicates(false);
+    }
+  };
+
+  useEffect(() => {
+    if (duplicatesCache.has(selectedBucket)) {
+      setDuplicateGroups(duplicatesCache.get(selectedBucket)!);
+    } else if (files.length > 0) {
+      fetchDuplicates();
+    }
+  }, [selectedBucket]);
+
+  const getFileName = (id: string): string => {
+    const file = files.find(f => f.id === id);
+    return file?.name || id;
+  };
 
   const pct = (count: number) => files.length ? `${((count / files.length) * 100).toFixed(1)}%` : '0%';
 
@@ -123,6 +160,40 @@ export const InsightsPanel: React.FC<InsightsPanelProps> = ({
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="vais-section">
+        <div className="vais-section-header">
+          <h2>{t('duplicates')}</h2>
+          <button className="icon-btn" title={tc('refresh')} onClick={fetchDuplicates} disabled={detectingDuplicates}>
+            <RefreshCw size={18} className={detectingDuplicates ? 'spinner' : ''} />
+          </button>
+        </div>
+        {detectingDuplicates && duplicateGroups === null && (
+          <div className="loading"><Loader size={20} className="spinner" /> {tc('loading')}</div>
+        )}
+        {duplicateError && <p style={{ color: 'var(--color-error, #e53e3e)' }}>{duplicateError}</p>}
+        {duplicateGroups !== null && duplicateGroups.length === 0 && (
+          <p>{t('noDuplicates')}</p>
+        )}
+        {duplicateGroups !== null && duplicateGroups.length > 0 && (
+          <table className="file-table">
+            <thead>
+              <tr>
+                <th>{t('duplicateFiles')}</th>
+                <th>{t('duplicateReason')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {duplicateGroups.map((group, idx) => (
+                <tr key={idx}>
+                  <td>{group.ids.map(id => getFileName(id)).join(', ')}</td>
+                  <td>{group.reason}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );

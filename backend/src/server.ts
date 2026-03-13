@@ -10,7 +10,7 @@ import {
   extractValueDate, resolveFilePath
 } from './services/storage';
 import type { KbEntry } from './services/storage';
-import { analyzeFile, startBatchAnalysis, getBatchAnalysisStatus, listBatches, getBatchAnalysisDetails } from './services/gemini';
+import { analyzeFile, startBatchAnalysis, getBatchAnalysisStatus, listBatches, getBatchAnalysisDetails, detectDuplicates } from './services/gemini';
 import {
   listDataStores as searchListDataStores,
   createDataStore as searchCreateDataStore,
@@ -370,6 +370,21 @@ app.delete('/api/files', async (req, res) => {
 });
 
 // --- Gemini analysis routes ---
+
+// POST /api/files/duplicates — Detect potential duplicates via Gemini
+app.post('/api/files/duplicates', async (req, res) => {
+  const bucket = resolveBucket(req, res);
+  if (!bucket) return;
+  try {
+    const entries = await getKbMetadata(bucket);
+    const lang = (req.body.lang as string) || 'fr';
+    const groups = await detectDuplicates(entries, lang);
+    res.json({ groups });
+  } catch (err: any) {
+    console.error('Duplicate detection error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // POST /api/files/analyze-all — Start batch analysis (must be before :id route)
 app.post('/api/files/analyze-all', async (req, res) => {

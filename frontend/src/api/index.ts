@@ -102,6 +102,10 @@ export const api = {
     const res = await apiClient.get(`/files/analyze-all/${encodeURIComponent(batchName)}/details`);
     return res.data;
   },
+  detectDuplicates: async (lang: string): Promise<{ groups: { ids: string[]; reason: string }[] }> => {
+    const res = await apiClient.post('/files/duplicates', { lang });
+    return res.data;
+  },
   deleteFile: async (id: string) => {
     const res = await apiClient.delete(`/files/${encodeURIComponent(id)}`);
     return res.data;

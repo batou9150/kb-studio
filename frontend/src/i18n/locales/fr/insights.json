@@ -7,5 +7,10 @@
   "noCategory": "Non catégorisé",
   "byFileType": "Répartition par type de fichier",
   "fileType": "Type de fichier",
-  "noFileType": "Sans extension"
+  "noFileType": "Sans extension",
+  "duplicates": "Doublons potentiels",
+  "duplicateFiles": "Fichiers",
+  "duplicateReason": "Raison",
+  "noDuplicates": "Aucun doublon potentiel trouvé",
+  "detectError": "Erreur lors de la détection des doublons"
 }
