@@ -8,6 +8,7 @@ import frAdmin from './locales/fr/admin.json';
 import frSearch from './locales/fr/search.json';
 import frAnswer from './locales/fr/answer.json';
 import frDialogs from './locales/fr/dialogs.json';
+import frInsights from './locales/fr/insights.json';
 
 import enCommon from './locales/en/common.json';
 import enExplorer from './locales/en/explorer.json';
@@ -16,6 +17,7 @@ import enAdmin from './locales/en/admin.json';
 import enSearch from './locales/en/search.json';
 import enAnswer from './locales/en/answer.json';
 import enDialogs from './locales/en/dialogs.json';
+import enInsights from './locales/en/insights.json';
 
 const savedLang = localStorage.getItem('kb-studio-lang');
 const browserLang = navigator.language.split('-')[0];
@@ -30,6 +32,7 @@ i18n.use(initReactI18next).init({
       search: frSearch,
       answer: frAnswer,
       dialogs: frDialogs,
+      insights: frInsights,
     },
     en: {
       common: enCommon,
@@ -39,11 +42,12 @@ i18n.use(initReactI18next).init({
       search: enSearch,
       answer: enAnswer,
       dialogs: enDialogs,
+      insights: enInsights,
     },
   },
   lng: savedLang || (['fr', 'en'].includes(browserLang) ? browserLang : 'fr'),
   fallbackLng: 'fr',
-  ns: ['common', 'explorer', 'details', 'admin', 'search', 'answer', 'dialogs'],
+  ns: ['common', 'explorer', 'details', 'admin', 'search', 'answer', 'dialogs', 'insights'],
   defaultNS: 'common',
   interpolation: {
     escapeValue: false,
