@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import './App.css';
 import { api, setCurrentBucket } from './api';
@@ -21,7 +21,11 @@ function App() {
   const [folders, setFolders] = useState<string[]>([]);
   const [currentFolder, setCurrentFolder] = useState<string>('');
   const [files, setFiles] = useState<FileItem[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const searchQuery = searchParams.get('q') || '';
+  const setSearchQuery = useCallback((query: string) => {
+    setSearchParams(query ? { q: query } : {}, { replace: true });
+  }, [setSearchParams]);
   const [bucketNames, setBucketNames] = useState<string[]>([]);
   const [selectedBucket, setSelectedBucket] = useState('');
   const [projectId, setProjectId] = useState('');
@@ -348,6 +352,7 @@ function App() {
                 onDeleteFile={handleDeleteFile}
                 onDownloadFile={handleDownloadFile}
                 onRenameFile={handleRenameFile}
+                searchQuery={searchQuery}
                 onSearch={setSearchQuery}
                 onAnalyzeAll={handleAnalyzeAll}
                 analyzeProgress={analyzeProgress}

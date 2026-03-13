@@ -15,6 +15,7 @@ interface ExplorerProps {
   onDeleteFile: (id: string) => void;
   onDownloadFile: (id: string) => void;
   onRenameFile: (id: string, newName: string) => void;
+  searchQuery: string;
   onSearch: (query: string) => void;
   onAnalyzeAll: () => void;
   analyzeProgress: { state: 'preparing' } | { state: 'starting' } | { state: 'running'; done: number; total: number } | null;
@@ -29,7 +30,7 @@ interface ExplorerProps {
 }
 
 export const Explorer: React.FC<ExplorerProps> = ({
-  files, selectedFile, onSelectFile, onUpload, onDeleteFile, onDownloadFile, onRenameFile, onSearch, onAnalyzeAll, analyzeProgress, bucketNames, selectedBucket, onBucketChange, projectId, onRefresh, totalFileCount, sidebar, detailsPanel
+  files, selectedFile, onSelectFile, onUpload, onDeleteFile, onDownloadFile, onRenameFile, searchQuery, onSearch, onAnalyzeAll, analyzeProgress, bucketNames, selectedBucket, onBucketChange, projectId, onRefresh, totalFileCount, sidebar, detailsPanel
 }) => {
   const { t } = useTranslation('explorer');
   const tc = useTranslation('common').t;
@@ -102,6 +103,7 @@ export const Explorer: React.FC<ExplorerProps> = ({
             <input
               type="text"
               placeholder={t('searchPlaceholder')}
+              value={searchQuery}
               onChange={(e) => onSearch(e.target.value)}
             />
           </div>
