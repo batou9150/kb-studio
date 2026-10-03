@@ -53,7 +53,7 @@ export interface DataStoreStatus {
 export interface DataStoreDocument {
   id: string;
   uri: string;
-  structData: Record<string, any>;
+  structData: Record<string, unknown>;
   indexState: 'indexed' | 'pending' | 'error';
   indexPendingMessage: string | null;
 }
@@ -88,4 +88,15 @@ export interface AnswerSearchResult {
 export interface AnswerQueryResponse {
   answerText: string;
   searchResults: AnswerSearchResult[];
+}
+
+/** Vertex AI Search document processing options sent when creating a datastore. */
+export interface DocumentProcessingConfig {
+  defaultParsingConfig?: {
+    ocrParsingConfig?: { useNativeText: boolean };
+    layoutParsingConfig?: { enableTableAnnotation: boolean; enableImageAnnotation: boolean };
+  };
+  chunkingConfig?: {
+    layoutBasedChunkingConfig: { chunkSize: number; includeAncestorHeadings: boolean };
+  };
 }

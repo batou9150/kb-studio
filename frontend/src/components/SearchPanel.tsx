@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { api } from '../api';
-import type { DataStoreStatus, DataStoreDocument, ImportOperationStatus, ImportHistoryEntry } from '../types';
+import { api, getErrorMessage } from '../api';
+import type { DataStoreStatus, DataStoreDocument, ImportOperationStatus, ImportHistoryEntry, DocumentProcessingConfig } from '../types';
 import { Loader, AlertTriangle, CheckCircle, XCircle, RefreshCw, BrushCleaning, Trash2, Upload, Plus, ChevronDown, ChevronRight, Clock, Eye } from 'lucide-react';
 import { BucketSelector } from './BucketSelector';
 import { DataStoreSelector } from './DataStoreSelector';
@@ -64,8 +64,8 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ bucketNames, selectedB
     try {
       const s = await api.getDataStoreStatus(ds.dataStoreId, ds.location);
       setStatus(s);
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message);
+    } catch (err) {
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -78,7 +78,9 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ bucketNames, selectedB
       const res = await api.listDataStoreDocuments(ds.dataStoreId, ds.location, 20, token ?? undefined);
       setDocuments(prev => append ? [...prev, ...res.documents] : res.documents);
       setNextPageToken(res.nextPageToken);
-    } catch { }
+    } catch {
+      // Document listing is best-effort; the status panel reports API errors
+    }
   }, [ds.dataStoreId, ds.location, nextPageToken]);
 
   const fetchImportHistory = useCallback(async () => {
@@ -154,7 +156,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ bucketNames, selectedB
     setError(null);
     try {
       // Build documentProcessingConfig from advanced options
-      let documentProcessingConfig: any = undefined;
+      let documentProcessingConfig: DocumentProcessingConfig | undefined = undefined;
       const hasParserConfig = defaultParser !== 'digital';
       const hasChunkingConfig = enableChunking;
       if (hasParserConfig || hasChunkingConfig) {
@@ -199,8 +201,8 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ bucketNames, selectedB
       setCreateApp(true);
       setAppSearchTier('enterprise');
       setAppEnableLlm(true);
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message);
+    } catch (err) {
+      setError(getErrorMessage(err));
     } finally {
       setActionLoading(null);
     }
@@ -214,8 +216,8 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ bucketNames, selectedB
       const { operationName } = await api.importDocuments(ds.dataStoreId, ds.location, mode);
       setImportOperation({ name: operationName, location: ds.location });
       setStatus(prev => prev ? { ...prev, lastImportDone: false } : prev);
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message);
+    } catch (err) {
+      setError(getErrorMessage(err));
       setActionLoading(null);
     }
   };
@@ -230,8 +232,8 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ bucketNames, selectedB
       await fetchStatus();
       setDocuments([]);
       setNextPageToken(null);
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message);
+    } catch (err) {
+      setError(getErrorMessage(err));
     } finally {
       setActionLoading(null);
     }
@@ -250,8 +252,8 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ bucketNames, selectedB
       setNextPageToken(null);
       setImportHistory([]);
       await ds.fetchDataStores();
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message);
+    } catch (err) {
+      setError(getErrorMessage(err));
     } finally {
       setActionLoading(null);
     }

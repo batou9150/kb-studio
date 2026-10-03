@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X, Save, FileText, Pencil, Check, Loader, Sparkles } from 'lucide-react';
 import type { FileItem } from '../types';
-import { api } from '../api';
+import { api, getErrorMessage } from '../api';
 
 interface DetailsPanelProps {
   file: FileItem | null;
@@ -86,8 +86,8 @@ export const DetailsPanel: React.FC<DetailsPanelProps> = ({
       setDescription(result.description);
       setDate(result.value_date);
       setCategory(result.category);
-    } catch (err: any) {
-      alert(t('analyzeError', { error: err.response?.data?.error || err.message }));
+    } catch (err) {
+      alert(t('analyzeError', { error: getErrorMessage(err) }));
     } finally {
       setAnalyzing(false);
     }

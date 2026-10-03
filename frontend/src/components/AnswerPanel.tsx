@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { api } from '../api';
+import { api, getErrorMessage } from '../api';
 import type { AnswerQueryResponse } from '../types';
 import { Loader, SendHorizontal, ExternalLink } from 'lucide-react';
 import { DataStoreSelector } from './DataStoreSelector';
@@ -40,8 +40,8 @@ export const AnswerPanel: React.FC<AnswerPanelProps> = ({ projectId }) => {
         ? await api.answerQuery(ds.dataStoreId, ds.location, query.trim())
         : await api.searchQuery(ds.dataStoreId, ds.location, query.trim());
       setResult(res);
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message);
+    } catch (err) {
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }

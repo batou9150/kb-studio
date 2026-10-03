@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { FileItem, ImportOperationStatus, ImportHistoryEntry, AnswerQueryResponse } from '../types';
+import type { FileItem, ImportOperationStatus, ImportHistoryEntry, AnswerQueryResponse, DocumentProcessingConfig } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
 
@@ -17,6 +17,12 @@ apiClient.interceptors.request.use((config) => {
   }
   return config;
 });
+
+/** Error message for display: the API's `error` field when present, the generic message otherwise. */
+export function getErrorMessage(err: unknown): string {
+  if (axios.isAxiosError(err)) return err.response?.data?.error || err.message;
+  return err instanceof Error ? err.message : String(err);
+}
 
 export const api = {
   // Config
@@ -53,7 +59,7 @@ export const api = {
     const relativePaths = files.map(f => {
       // webkitRelativePath is set by <input webkitdirectory>
       // path is set by file-selector (react-dropzone) on folder drops
-      const rp = (f.webkitRelativePath || (f as any).path || '').replace(/^\.?\//, '');
+      const rp = (f.webkitRelativePath || (f as File & { path?: string }).path || '').replace(/^\.?\//, '');
       // Extract the directory portion (strip the filename)
       const lastSlash = rp.lastIndexOf('/');
       return lastSlash > -1 ? rp.substring(0, lastSlash) : '';
@@ -150,7 +156,7 @@ export const api = {
     const res = await apiClient.get('/search/datastores');
     return res.data;
   },
-  createDataStore: async (dataStoreId: string, displayName: string, location: string, documentProcessingConfig?: any, appConfig?: { searchTier: 'standard' | 'enterprise'; enableLlm: boolean }) => {
+  createDataStore: async (dataStoreId: string, displayName: string, location: string, documentProcessingConfig?: DocumentProcessingConfig, appConfig?: { searchTier: 'standard' | 'enterprise'; enableLlm: boolean }) => {
     const res = await apiClient.post('/search/datastores', { dataStoreId, displayName, location, documentProcessingConfig, appConfig });
     return res.data;
   },

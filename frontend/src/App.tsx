@@ -137,7 +137,7 @@ function App() {
         const path = currentFolder ? `${currentFolder}${folderName}/` : `${folderName}/`;
         await api.createFolder(path);
         loadData();
-      } catch (err) {
+      } catch {
         alert(t('error.createFolder'));
       }
     }
@@ -161,7 +161,7 @@ function App() {
       setLoading(true);
       await api.uploadFiles(uploadFiles, targetFolder);
       await loadData();
-    } catch (err) {
+    } catch {
       alert(t('error.upload'));
     } finally {
       setLoading(false);
@@ -197,7 +197,7 @@ function App() {
       }
 
       await loadData();
-    } catch (err) {
+    } catch {
       alert(t('error.upload'));
     } finally {
       setLoading(false);
@@ -220,7 +220,7 @@ function App() {
       await api.updateFileMetadata(id, description, date, category);
       alert(t('success.metadataUpdated'));
       loadData();
-    } catch (err) {
+    } catch {
       alert(t('error.update'));
     }
   };
@@ -231,7 +231,7 @@ function App() {
       setIsPanelOpen(false);
       setSelectedFile(null);
       loadData();
-    } catch (err) {
+    } catch {
       alert(t('error.rename'));
     }
   };
@@ -247,7 +247,7 @@ function App() {
         setIsPanelOpen(false);
         setSelectedFile(null);
         loadData();
-      } catch (err) {
+      } catch {
         alert(t('error.delete'));
       }
     }
@@ -259,7 +259,7 @@ function App() {
       setIsPanelOpen(false);
       setSelectedFile(null);
       loadData();
-    } catch (err) {
+    } catch {
       alert(t('error.move'));
     }
   };
@@ -271,7 +271,7 @@ function App() {
       const { batchName } = await api.startAnalyzeAll();
       batchNameRef.current = batchName;
       setAnalyzeProgress({ state: 'starting' });
-    } catch (err) {
+    } catch {
       setAnalyzeProgress(null);
       alert(t('error.analysis'));
     }

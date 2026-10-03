@@ -74,7 +74,7 @@ export const InsightsPanel: React.FC<InsightsPanelProps> = ({
     } else if (files.length > 0) {
       fetchDuplicates();
     }
-  }, [selectedBucket]);
+  }, [selectedBucket]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getFileName = (id: string): string => {
     const file = files.find(f => f.id === id);

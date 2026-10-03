@@ -33,7 +33,9 @@ export function useDataStores(storageKey: string) {
             setDataStoreId(savedId);
             setLocation(savedLoc);
           }
-        } catch {}
+        } catch {
+          // Ignore a corrupt saved selection
+        }
       }
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
