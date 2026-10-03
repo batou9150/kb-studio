@@ -35,37 +35,34 @@ export const DetailsPanel: React.FC<DetailsPanelProps> = ({
   const [category, setCategory] = useState('');
   const [editingName, setEditingName] = useState(false);
   const [fileName, setFileName] = useState('');
-  const [textContent, setTextContent] = useState<string | null>(null);
-  const [previewLoading, setPreviewLoading] = useState(false);
-  const [previewError, setPreviewError] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
 
+  // Reset the form whenever a new file object is shown (selection change or refreshed data)
+  const [formFile, setFormFile] = useState<FileItem | null>(null);
+  if (file && file !== formFile) {
+    setFormFile(file);
+    setDescription(file.metadata?.structData?.description || '');
+    setDate(file.metadata?.structData?.value_date || '');
+    setCategory(file.metadata?.structData?.category || '');
+    setFileName(file.name);
+    setEditingName(false);
+  }
+
+  // Text preview, tied to the file object it was loaded for so a stale result is never shown
+  const [preview, setPreview] = useState<{ file: FileItem; content: string | null; error: string | null } | null>(null);
+  const isTextFile = !!file && getPreviewType(file.contentType) === 'text';
+  const currentPreview = preview && preview.file === file ? preview : null;
+  const textContent = currentPreview?.content ?? null;
+  const previewError = currentPreview?.error ?? null;
+  const previewLoading = isTextFile && !currentPreview;
+
   useEffect(() => {
-    if (file) {
-      setDescription(file.metadata?.structData?.description || '');
-      setDate(file.metadata?.structData?.value_date || '');
-      setCategory(file.metadata?.structData?.category || '');
-      setFileName(file.name);
-      setEditingName(false);
-
-      // Reset preview state
-      setTextContent(null);
-      setPreviewError(null);
-      setPreviewLoading(false);
-
-      const previewType = getPreviewType(file.contentType);
-      if (previewType !== 'text') return;
-
-      setPreviewLoading(true);
-      let cancelled = false;
-
-      api.getTextContent(file.id)
-        .then(content => { if (!cancelled) setTextContent(content); })
-        .catch(err => { if (!cancelled) setPreviewError(err.message || 'Failed to load preview'); })
-        .finally(() => { if (!cancelled) setPreviewLoading(false); });
-
-      return () => { cancelled = true; };
-    }
+    if (!file || getPreviewType(file.contentType) !== 'text') return;
+    let cancelled = false;
+    api.getTextContent(file.id)
+      .then(content => { if (!cancelled) setPreview({ file, content, error: null }); })
+      .catch(err => { if (!cancelled) setPreview({ file, content: null, error: err.message || 'Failed to load preview' }); });
+    return () => { cancelled = true; };
   }, [file]);
 
   if (!isOpen || !file) return null;

@@ -15,11 +15,6 @@ export default defineConfig([
       reactHooks.configs.flat.recommended,
       reactRefresh.configs.vite,
     ],
-    rules: {
-      // Added in eslint-plugin-react-hooks 7.1: existing fetch-on-mount and reset-on-prop-change
-      // effects still need refactoring (derived state / keyed remounts) before this can be an error.
-      'react-hooks/set-state-in-effect': 'warn',
-    },
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,

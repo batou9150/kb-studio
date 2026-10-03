@@ -22,23 +22,30 @@ export function useDataStores(storageKey: string) {
     }
   }, []);
 
-  // Load list + restore last selection from localStorage
+  // Load list + restore last selection from localStorage (`loading` starts true)
   useEffect(() => {
-    fetchDataStores().then(list => {
-      const saved = localStorage.getItem(storageKey);
-      if (saved && list.length > 0) {
-        try {
-          const { dataStoreId: savedId, location: savedLoc } = JSON.parse(saved);
-          if (list.some(ds => ds.dataStoreId === savedId && ds.location === savedLoc)) {
-            setDataStoreId(savedId);
-            setLocation(savedLoc);
+    let cancelled = false;
+    api.listDataStores()
+      .catch((): DataStoreOption[] => [])
+      .then(list => {
+        if (cancelled) return;
+        setDataStores(list);
+        setLoading(false);
+        const saved = localStorage.getItem(storageKey);
+        if (saved && list.length > 0) {
+          try {
+            const { dataStoreId: savedId, location: savedLoc } = JSON.parse(saved);
+            if (list.some(ds => ds.dataStoreId === savedId && ds.location === savedLoc)) {
+              setDataStoreId(savedId);
+              setLocation(savedLoc);
+            }
+          } catch {
+            // Ignore a corrupt saved selection
           }
-        } catch {
-          // Ignore a corrupt saved selection
         }
-      }
-    });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+      });
+    return () => { cancelled = true; };
+  }, [storageKey]);
 
   // Persist selection
   useEffect(() => {

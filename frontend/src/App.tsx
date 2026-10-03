@@ -58,25 +58,44 @@ function App() {
   const [pendingFolder, setPendingFolder] = useState<string>('');
   const [duplicates, setDuplicates] = useState<{name: string, id: string}[]>([]);
 
+  const fetchData = useCallback(async () => {
+    const [foldersData, filesData, allFilesData] = await Promise.all([
+      api.getFolders(),
+      api.getFiles(currentFolder, searchQuery),
+      api.getFiles(),
+    ]);
+    return { foldersData, filesData, allFilesData };
+  }, [currentFolder, searchQuery]);
+
+  const applyData = useCallback(({ foldersData, filesData, allFilesData }: Awaited<ReturnType<typeof fetchData>>) => {
+    setFolders(foldersData);
+    setFiles(filesData);
+    setAllFiles(allFilesData);
+  }, []);
+
+  const reportLoadError = useCallback((error: unknown) => {
+    console.error('Error loading data:', error);
+    alert(t('error.loadData'));
+  }, [t]);
+
+  // Explicit reload, e.g. after an upload or a rename
   const loadData = useCallback(async () => {
     if (!selectedBucket) return;
     setLoading(true);
     try {
-      const [foldersData, filesData, allFilesData] = await Promise.all([
-        api.getFolders(),
-        api.getFiles(currentFolder, searchQuery),
-        api.getFiles(),
-      ]);
-      setFolders(foldersData);
-      setFiles(filesData);
-      setAllFiles(allFilesData);
+      applyData(await fetchData());
     } catch (error) {
-      console.error('Error loading data:', error);
-      alert(t('error.loadData'));
+      reportLoadError(error);
     } finally {
       setLoading(false);
     }
-  }, [currentFolder, searchQuery, selectedBucket, t]);
+  }, [applyData, fetchData, reportLoadError, selectedBucket]);
+
+  // Automatic reload when the bucket, folder or search changes. Loading is derived from
+  // the key of the last completed load, and responses for an outdated key are dropped.
+  const dataKey = selectedBucket ? `${selectedBucket}|${currentFolder}|${searchQuery}` : '';
+  const [loadedKey, setLoadedKey] = useState('');
+  const isLoading = loading || (dataKey !== '' && loadedKey !== dataKey);
 
   useEffect(() => {
     api.getConfig().then(({ bucketNames: names, projectId, appName, appLogo }) => {
@@ -94,18 +113,17 @@ function App() {
   }, []);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    if (!dataKey) return;
+    let cancelled = false;
+    fetchData()
+      .then(data => { if (!cancelled) applyData(data); })
+      .catch(error => { if (!cancelled) reportLoadError(error); })
+      .finally(() => { if (!cancelled) setLoadedKey(dataKey); });
+    return () => { cancelled = true; };
+  }, [applyData, dataKey, fetchData, reportLoadError]);
 
-  // Keep selectedFile in sync with refreshed files list
-  useEffect(() => {
-    if (selectedFile) {
-      const updated = files.find(f => f.id === selectedFile.id);
-      if (updated && updated !== selectedFile) {
-        setSelectedFile(updated);
-      }
-    }
-  }, [files, selectedFile]);
+  // Show the refreshed version of the selected file after the files list reloads
+  const displayedFile = selectedFile && (files.find(f => f.id === selectedFile.id) ?? selectedFile);
 
   // Fetch all files (unfiltered) for total count and insights
   const loadAllFiles = useCallback(() => {
@@ -339,14 +357,14 @@ function App() {
       <Routes>
         <Route path="/" element={
           <div className="main-content">
-            {loading && files.length === 0 ? (
+            {isLoading && files.length === 0 ? (
               <div className="explorer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Loader className="spinner" size={48} color="var(--primary-color)" />
               </div>
             ) : (
               <Explorer
                 files={files}
-                selectedFile={selectedFile}
+                selectedFile={displayedFile}
                 onSelectFile={handleSelectFile}
                 onUpload={handleUpload}
                 onDeleteFile={handleDeleteFile}
@@ -374,7 +392,7 @@ function App() {
                 }
                 detailsPanel={
                   <DetailsPanel
-                    file={selectedFile}
+                    file={displayedFile}
                     isOpen={isPanelOpen}
                     onClose={() => setIsPanelOpen(false)}
                     onUpdateMetadata={handleUpdateMetadata}

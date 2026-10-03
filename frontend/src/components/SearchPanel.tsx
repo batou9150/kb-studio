@@ -83,22 +83,25 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ bucketNames, selectedB
     }
   }, [ds.dataStoreId, ds.location, nextPageToken]);
 
+  const applyImportHistory = useCallback((history: ImportHistoryEntry[]) => {
+    setImportHistory(history);
+
+    // If the most recent import is still running, start polling it
+    const latest = history[0];
+    if (latest && !latest.done && !importOperation) {
+      setImportOperation({ name: latest.name, location: ds.location });
+      setActionLoading('import-poll');
+    }
+  }, [ds.location, importOperation]);
+
   const fetchImportHistory = useCallback(async () => {
     if (!ds.dataStoreId) return;
     try {
-      const history = await api.listImportOperations(ds.dataStoreId, ds.location);
-      setImportHistory(history);
-
-      // If the most recent import is still running, start polling it
-      const latest = history[0];
-      if (latest && !latest.done && !importOperation) {
-        setImportOperation({ name: latest.name, location: ds.location });
-        setActionLoading('import-poll');
-      }
+      applyImportHistory(await api.listImportOperations(ds.dataStoreId, ds.location));
     } catch {
       setImportHistory([]);
     }
-  }, [ds.dataStoreId, ds.location, importOperation]);
+  }, [ds.dataStoreId, ds.location, applyImportHistory]);
 
   // Poll import operation progress
   useEffect(() => {
@@ -128,17 +131,40 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ bucketNames, selectedB
     return () => { cancelled = true; clearInterval(interval); };
   }, [importOperation]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-fetch when selection or bucket changes
-  useEffect(() => {
-    if (ds.dataStoreId) {
+  // Reset the panel while rendering when the selection or bucket changes...
+  const selectionKey = ds.dataStoreId ? `${ds.location}/${ds.dataStoreId}|${selectedBucket}` : '';
+  const [shownSelectionKey, setShownSelectionKey] = useState('');
+  if (selectionKey !== shownSelectionKey) {
+    setShownSelectionKey(selectionKey);
+    if (selectionKey) {
       setStatus(null);
       setDocuments([]);
       setNextPageToken(null);
       setImportHistory([]);
-      fetchStatus();
-      fetchDocuments();
-      fetchImportHistory();
+      setError(null);
+      setLoading(true);
     }
+  }
+
+  // ...then fetch its data, setting state only once the responses arrive
+  useEffect(() => {
+    if (!ds.dataStoreId) return;
+    let cancelled = false;
+    api.getDataStoreStatus(ds.dataStoreId, ds.location)
+      .then(s => { if (!cancelled) setStatus(s); })
+      .catch(err => { if (!cancelled) setError(getErrorMessage(err)); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    api.listDataStoreDocuments(ds.dataStoreId, ds.location, 20)
+      .then(res => {
+        if (cancelled) return;
+        setDocuments(res.documents);
+        setNextPageToken(res.nextPageToken);
+      })
+      .catch(() => { /* Document listing is best-effort; the status panel reports API errors */ });
+    api.listImportOperations(ds.dataStoreId, ds.location)
+      .then(history => { if (!cancelled) applyImportHistory(history); })
+      .catch(() => { if (!cancelled) setImportHistory([]); });
+    return () => { cancelled = true; };
   }, [ds.dataStoreId, ds.location, selectedBucket]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSelectChange = (value: string) => {

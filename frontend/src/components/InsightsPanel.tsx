@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Loader, RefreshCw } from 'lucide-react';
 import type { FileItem } from '../types';
@@ -49,18 +49,24 @@ export const InsightsPanel: React.FC<InsightsPanelProps> = ({
       .sort((a, b) => b.count - a.count);
   }, [files, t]);
 
-  const cached = duplicatesCache.get(selectedBucket);
-  const [duplicateGroups, setDuplicateGroups] = useState<{ ids: string[]; reason: string }[] | null>(cached ?? null);
+  const [duplicateGroups, setDuplicateGroups] = useState<{ ids: string[]; reason: string }[] | null>(null);
   const [detectingDuplicates, setDetectingDuplicates] = useState(false);
   const [duplicateError, setDuplicateError] = useState('');
 
+  const detectDuplicates = useCallback(() => {
+    const bucket = selectedBucket;
+    return api.detectDuplicates(i18n.language).then(result => {
+      duplicatesCache.set(bucket, result.groups);
+      return result.groups;
+    });
+  }, [selectedBucket, i18n.language]);
+
+  // Manual refresh
   const fetchDuplicates = async () => {
     setDetectingDuplicates(true);
     setDuplicateError('');
     try {
-      const result = await api.detectDuplicates(i18n.language);
-      setDuplicateGroups(result.groups);
-      duplicatesCache.set(selectedBucket, result.groups);
+      setDuplicateGroups(await detectDuplicates());
     } catch {
       setDuplicateError(t('detectError'));
     } finally {
@@ -68,12 +74,25 @@ export const InsightsPanel: React.FC<InsightsPanelProps> = ({
     }
   };
 
+  // On bucket change (and first render): show cached groups, or start a detection when the
+  // bucket has files. State is adjusted while rendering; the request itself runs in the effect.
+  const shouldDetect = !duplicatesCache.has(selectedBucket) && files.length > 0;
+  const [shownBucket, setShownBucket] = useState<string | null>(null);
+  if (selectedBucket !== shownBucket) {
+    setShownBucket(selectedBucket);
+    setDuplicateGroups(duplicatesCache.get(selectedBucket) ?? null);
+    setDuplicateError('');
+    setDetectingDuplicates(shouldDetect);
+  }
+
   useEffect(() => {
-    if (duplicatesCache.has(selectedBucket)) {
-      setDuplicateGroups(duplicatesCache.get(selectedBucket)!);
-    } else if (files.length > 0) {
-      fetchDuplicates();
-    }
+    if (!shouldDetect) return;
+    let cancelled = false;
+    detectDuplicates()
+      .then(groups => { if (!cancelled) setDuplicateGroups(groups); })
+      .catch(() => { if (!cancelled) setDuplicateError(t('detectError')); })
+      .finally(() => { if (!cancelled) setDetectingDuplicates(false); });
+    return () => { cancelled = true; };
   }, [selectedBucket]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getFileName = (id: string): string => {
