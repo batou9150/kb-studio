@@ -28,7 +28,7 @@ const getPreviewType = (contentType: string): 'image' | 'pdf' | 'text' | 'other'
 export const DetailsPanel: React.FC<DetailsPanelProps> = ({
   file, isOpen, onClose, onUpdateMetadata, onRenameFile
 }) => {
-  const { t } = useTranslation('details');
+  const { t, i18n } = useTranslation('details');
   const tc = useTranslation('common').t;
   const [description, setDescription] = useState('');
   const [date, setDate] = useState('');
@@ -82,7 +82,7 @@ export const DetailsPanel: React.FC<DetailsPanelProps> = ({
   const handleAnalyze = async () => {
     setAnalyzing(true);
     try {
-      const result = await api.analyzeFile(file.id);
+      const result = await api.analyzeFile(file.id, i18n.language);
       setDescription(result.description);
       setDate(result.value_date);
       setCategory(result.category);

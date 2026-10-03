@@ -86,12 +86,12 @@ export const api = {
     const res = await apiClient.patch(`/files/${encodeURIComponent(id)}`, { description, value_date, category });
     return res.data;
   },
-  analyzeFile: async (id: string): Promise<{ description: string; value_date: string; category: string }> => {
-    const res = await apiClient.post(`/files/${encodeURIComponent(id)}/analyze`);
+  analyzeFile: async (id: string, lang: string): Promise<{ description: string; value_date: string; category: string }> => {
+    const res = await apiClient.post(`/files/${encodeURIComponent(id)}/analyze`, { lang });
     return res.data;
   },
-  startAnalyzeAll: async (): Promise<{ batchName: string; totalFiles: number }> => {
-    const res = await apiClient.post('/files/analyze-all');
+  startAnalyzeAll: async (lang: string): Promise<{ batchName: string; totalFiles: number }> => {
+    const res = await apiClient.post('/files/analyze-all', { lang });
     return res.data;
   },
   getAnalyzeAllStatus: async (batchName: string, bucket?: string) => {

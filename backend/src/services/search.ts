@@ -1,8 +1,9 @@
 import { v1beta, protos } from '@google-cloud/discoveryengine';
 import { Storage } from '@google-cloud/storage';
+import { googleClientOptions } from '../credentials';
 
 const projectId = process.env.GOOGLE_CLOUD_PROJECT!;
-const storage = new Storage();
+const storage = new Storage(googleClientOptions);
 
 function apiEndpoint(location: string): string | undefined {
   if (location === 'global') return undefined; // use default endpoint
@@ -12,36 +13,36 @@ function apiEndpoint(location: string): string | undefined {
 function getDataStoreClient(location: string) {
   const apiEndpointVal = apiEndpoint(location);
   return apiEndpointVal
-    ? new v1beta.DataStoreServiceClient({ apiEndpoint: apiEndpointVal })
-    : new v1beta.DataStoreServiceClient();
+    ? new v1beta.DataStoreServiceClient({ ...googleClientOptions, apiEndpoint: apiEndpointVal })
+    : new v1beta.DataStoreServiceClient(googleClientOptions);
 }
 
 function getEngineClient(location: string) {
   const apiEndpointVal = apiEndpoint(location);
   return apiEndpointVal
-    ? new v1beta.EngineServiceClient({ apiEndpoint: apiEndpointVal })
-    : new v1beta.EngineServiceClient();
+    ? new v1beta.EngineServiceClient({ ...googleClientOptions, apiEndpoint: apiEndpointVal })
+    : new v1beta.EngineServiceClient(googleClientOptions);
 }
 
 function getConversationalSearchClient(location: string) {
   const apiEndpointVal = apiEndpoint(location);
   return apiEndpointVal
-    ? new v1beta.ConversationalSearchServiceClient({ apiEndpoint: apiEndpointVal })
-    : new v1beta.ConversationalSearchServiceClient();
+    ? new v1beta.ConversationalSearchServiceClient({ ...googleClientOptions, apiEndpoint: apiEndpointVal })
+    : new v1beta.ConversationalSearchServiceClient(googleClientOptions);
 }
 
 function getDocumentClient(location: string) {
   const apiEndpointVal = apiEndpoint(location);
   return apiEndpointVal
-    ? new v1beta.DocumentServiceClient({ apiEndpoint: apiEndpointVal })
-    : new v1beta.DocumentServiceClient();
+    ? new v1beta.DocumentServiceClient({ ...googleClientOptions, apiEndpoint: apiEndpointVal })
+    : new v1beta.DocumentServiceClient(googleClientOptions);
 }
 
 function getSearchClient(location: string) {
   const apiEndpointVal = apiEndpoint(location);
   return apiEndpointVal
-    ? new v1beta.SearchServiceClient({ apiEndpoint: apiEndpointVal })
-    : new v1beta.SearchServiceClient();
+    ? new v1beta.SearchServiceClient({ ...googleClientOptions, apiEndpoint: apiEndpointVal })
+    : new v1beta.SearchServiceClient(googleClientOptions);
 }
 
 function collectionPath(location: string) {

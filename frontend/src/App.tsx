@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Routes, Route, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import './App.css';
-import { api, setCurrentBucket } from './api';
+import { api, getErrorMessage, setCurrentBucket } from './api';
 import type { FileItem } from './types';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
@@ -17,7 +17,7 @@ import { InsightsPanel } from './components/InsightsPanel';
 import { Loader } from 'lucide-react';
 
 function App() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [folders, setFolders] = useState<string[]>([]);
   const [currentFolder, setCurrentFolder] = useState<string>('');
   const [files, setFiles] = useState<FileItem[]>([]);
@@ -161,8 +161,8 @@ function App() {
       setLoading(true);
       await api.uploadFiles(uploadFiles, targetFolder);
       await loadData();
-    } catch {
-      alert(t('error.upload'));
+    } catch (err) {
+      alert(`${t('error.upload')}\n${getErrorMessage(err)}`);
     } finally {
       setLoading(false);
     }
@@ -197,8 +197,8 @@ function App() {
       }
 
       await loadData();
-    } catch {
-      alert(t('error.upload'));
+    } catch (err) {
+      alert(`${t('error.upload')}\n${getErrorMessage(err)}`);
     } finally {
       setLoading(false);
     }
@@ -231,8 +231,8 @@ function App() {
       setIsPanelOpen(false);
       setSelectedFile(null);
       loadData();
-    } catch {
-      alert(t('error.rename'));
+    } catch (err) {
+      alert(`${t('error.rename')}\n${getErrorMessage(err)}`);
     }
   };
 
@@ -259,8 +259,8 @@ function App() {
       setIsPanelOpen(false);
       setSelectedFile(null);
       loadData();
-    } catch {
-      alert(t('error.move'));
+    } catch (err) {
+      alert(`${t('error.move')}\n${getErrorMessage(err)}`);
     }
   };
 
@@ -268,7 +268,7 @@ function App() {
     try {
       setAnalyzeProgress({ state: 'preparing' });
       batchBucketRef.current = selectedBucket;
-      const { batchName } = await api.startAnalyzeAll();
+      const { batchName } = await api.startAnalyzeAll(i18n.language);
       batchNameRef.current = batchName;
       setAnalyzeProgress({ state: 'starting' });
     } catch {

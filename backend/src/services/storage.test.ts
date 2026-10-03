@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseKbNdjson, serializeKbNdjson, extractValueDate } from './storage';
+import { parseKbNdjson, serializeKbNdjson, extractValueDate, validateName, normalizeFolderPath } from './storage';
 import type { KbEntry } from './storage';
 
 const entry = (id: string, description: string): KbEntry => ({
@@ -41,4 +41,20 @@ test('extractValueDate recognizes common filename date formats', () => {
   assert.equal(extractValueDate('budget 2023.xlsx'), '2023-01-01');
   assert.equal(extractValueDate('notes.txt'), '');
   assert.equal(extractValueDate('ref-120245.pdf'), '');
+});
+
+test('validateName rejects separators, dot segments and control characters', () => {
+  assert.equal(validateName('rapport été.pdf'), 'rapport été.pdf');
+  for (const bad of ['', '   ', 'a/b', '.', '..', 'a\nb', 'x'.repeat(256)]) {
+    assert.throws(() => validateName(bad), (err: any) => err.status === 400, JSON.stringify(bad));
+  }
+});
+
+test('normalizeFolderPath trims slashes and validates every segment', () => {
+  assert.equal(normalizeFolderPath(undefined), '');
+  assert.equal(normalizeFolderPath('/'), '');
+  assert.equal(normalizeFolderPath('a/b/'), 'a/b');
+  assert.equal(normalizeFolderPath('/a/b'), 'a/b');
+  assert.throws(() => normalizeFolderPath('a/../b'), (err: any) => err.status === 400);
+  assert.throws(() => normalizeFolderPath('a//b'), (err: any) => err.status === 400);
 });

@@ -1,13 +1,16 @@
-import express, { Request, Response } from 'express';
+import './credentials';
+import express, { NextFunction, Request, Response } from 'express';
 import cors from 'cors';
 import path from 'path';
 import multer from 'multer';
 import { randomUUID } from 'crypto';
+import { OAuth2Client } from 'google-auth-library';
+import { HttpError } from './errors';
 import {
-  initStorage, getFolders, createFolder, getFiles, uploadFile,
+  initStorage, getFolders, createFolder, getFiles, uploadFile, replaceFile,
   getFileStream, deleteFile, moveFile, appendKbEntries, updateKbEntry, getKbMetadata,
   checkFilesExist, renameFile, renameFolder, deleteFolder, deleteAllFiles,
-  extractValueDate, resolveFilePath
+  extractValueDate, resolveFilePath, normalizeFolderPath
 } from './services/storage';
 import type { KbEntry } from './services/storage';
 import { analyzeFile, startBatchAnalysis, getBatchAnalysisStatus, listBatches, getBatchAnalysisDetails, detectDuplicates } from './services/gemini';
@@ -27,7 +30,16 @@ import {
 
 
 const app = express();
-app.use(cors());
+
+// CORS: only needed when the frontend is served from another origin (local dev).
+// In production the SPA is served by this server, so cross-origin requests are refused
+// unless CORS_ORIGIN lists the allowed origins explicitly.
+const corsOrigins = (process.env.CORS_ORIGIN || '').split(',').map(s => s.trim()).filter(Boolean);
+if (corsOrigins.length > 0) {
+  app.use(cors({ origin: corsOrigins }));
+} else if (process.env.NODE_ENV !== 'production') {
+  app.use(cors());
+}
 app.use(express.json());
 
 // Request logging
@@ -40,7 +52,39 @@ app.use((req, res, next) => {
   next();
 });
 
-const upload = multer({ storage: multer.memoryStorage() });
+const MAX_UPLOAD_SIZE_MB = Number(process.env.MAX_UPLOAD_SIZE_MB) || 32;
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_UPLOAD_SIZE_MB * 1024 * 1024 },
+});
+
+/** Send an error response, using the status carried by HttpError (500 otherwise). */
+function sendError(res: Response, err: any) {
+  const status = err instanceof HttpError ? err.status : 500;
+  if (status >= 500) console.error(err);
+  res.status(status).json({ error: err.message });
+}
+
+// Optional Identity-Aware Proxy check: when IAP_AUDIENCE is set, every API request must
+// carry a valid IAP-signed JWT. Without it the API has no authentication of its own and
+// must only be reachable through IAP (or another authenticating proxy).
+const iapAudience = process.env.IAP_AUDIENCE;
+const iapClient = new OAuth2Client();
+if (iapAudience) {
+  app.use('/api', async (req, res, next) => {
+    try {
+      const jwt = req.header('x-goog-iap-jwt-assertion');
+      if (!jwt) return res.status(401).json({ error: 'Missing IAP assertion' });
+      const { pubkeys } = await iapClient.getIapPublicKeys();
+      await iapClient.verifySignedJwtWithCertsAsync(jwt, pubkeys, iapAudience, ['https://cloud.google.com/iap']);
+      next();
+    } catch {
+      res.status(401).json({ error: 'Invalid IAP assertion' });
+    }
+  });
+} else if (process.env.NODE_ENV === 'production') {
+  console.warn('IAP_AUDIENCE is not set: the API performs no authentication. Only expose it behind IAP.');
+}
 
 // Parse comma-separated bucket names
 const bucketNames = (process.env.GCS_BUCKET_NAME || 'kb-studio-bucket')
@@ -80,7 +124,7 @@ app.get('/api/folders', async (req, res) => {
     const folders = await getFolders(bucket);
     res.json(folders);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    sendError(res, err);
   }
 });
 
@@ -94,7 +138,7 @@ app.post('/api/folders', async (req, res) => {
     await createFolder(bucket, path);
     res.json({ success: true, path });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    sendError(res, err);
   }
 });
 
@@ -111,7 +155,7 @@ app.get('/api/files', async (req, res) => {
     }
     res.json(files);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    sendError(res, err);
   }
 });
 
@@ -127,7 +171,7 @@ app.post('/api/files/check-duplicates', async (req, res) => {
     const duplicates = await checkFilesExist(bucket, fileNames);
     res.json({ duplicates });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    sendError(res, err);
   }
 });
 
@@ -136,7 +180,7 @@ app.post('/api/files', upload.array('files'), async (req, res) => {
   const bucket = resolveBucket(req, res);
   if (!bucket) return;
   try {
-    const baseFolderPath = req.body.folderId || '';
+    const baseFolderPath = normalizeFolderPath(req.body.folderId);
     const files = req.files as Express.Multer.File[];
     const relativePaths: string[] = JSON.parse(req.body.relativePaths || '[]');
 
@@ -150,13 +194,8 @@ app.post('/api/files', upload.array('files'), async (req, res) => {
       file.originalname = Buffer.from(file.originalname, 'latin1').toString('utf-8').normalize('NFC');
 
       // Compute per-file folder: base folder + relative path from dropped/selected folder
-      const relDir = (relativePaths[i] || '').normalize('NFC');
-      let folderPath = baseFolderPath;
-      if (relDir) {
-        folderPath = baseFolderPath
-          ? `${baseFolderPath.endsWith('/') ? baseFolderPath : baseFolderPath + '/'}${relDir}`
-          : relDir;
-      }
+      const relDir = normalizeFolderPath((relativePaths[i] || '').normalize('NFC'));
+      const folderPath = [baseFolderPath, relDir].filter(Boolean).join('/');
 
       const filePath = await uploadFile(bucket, file, folderPath);
 
@@ -168,7 +207,7 @@ app.post('/api/files', upload.array('files'), async (req, res) => {
           description: '',
           value_date: extractValueDate(file.originalname),
           category: '',
-          folder: folderPath.replace(/\/+$/, ''),
+          folder: folderPath,
         },
         content: {
           mimeType: file.mimetype,
@@ -179,11 +218,11 @@ app.post('/api/files', upload.array('files'), async (req, res) => {
       results.push({ id, name: file.originalname, path: filePath });
     }
 
-    await appendKbEntries(bucket, kbEntries);
-    res.json(results);
+    // An upload over an existing path keeps that file's id
+    const ids = await appendKbEntries(bucket, kbEntries);
+    res.json(results.map((r, i) => ({ ...r, id: ids[i] })));
   } catch (err: any) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
+    sendError(res, err);
   }
 });
 
@@ -197,14 +236,11 @@ app.put('/api/files/:id', upload.single('file'), async (req, res) => {
     if (!file) return res.status(400).json({ error: 'No file provided' });
 
     file.originalname = Buffer.from(file.originalname, 'latin1').toString('utf-8').normalize('NFC');
-    const resolvedPath = await resolveFilePath(bucket, id);
-    const folderPath = resolvedPath.substring(0, resolvedPath.lastIndexOf('/')) || '';
-
-    const filePath = await uploadFile(bucket, file, folderPath);
+    const filePath = await replaceFile(bucket, id, file);
 
     res.json({ id, path: filePath });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    sendError(res, err);
   }
 });
 
@@ -219,7 +255,7 @@ app.patch('/api/files/:id', async (req, res) => {
     const updated = await updateKbEntry(bucket, id, { description, value_date, category });
     res.json(updated);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    sendError(res, err);
   }
 });
 
@@ -233,7 +269,7 @@ app.delete('/api/files/:id', async (req, res) => {
     await deleteFile(bucket, filePath);
     res.json({ success: true });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    sendError(res, err);
   }
 });
 
@@ -262,7 +298,7 @@ app.get('/api/files/:id/preview', async (req, res) => {
       }
     });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    sendError(res, err);
   }
 });
 
@@ -291,7 +327,7 @@ app.get('/api/files/:id/download', async (req, res) => {
       }
     });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    sendError(res, err);
   }
 });
 
@@ -307,7 +343,7 @@ app.put('/api/files/:id/rename', async (req, res) => {
     const newPath = await renameFile(bucket, filePath, newName);
     res.json({ success: true, newPath });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    sendError(res, err);
   }
 });
 
@@ -323,7 +359,7 @@ app.put('/api/files/:id/move', async (req, res) => {
     const newPath = await moveFile(bucket, filePath, newFolderId);
     res.json({ success: true, newPath });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    sendError(res, err);
   }
 });
 
@@ -335,11 +371,10 @@ app.put('/api/folders/:id', async (req, res) => {
     const id = req.params.id as string;
     const { newName } = req.body;
     if (!newName) return res.status(400).json({ error: 'newName is required' });
-    const oldPath = decodeURIComponent(id);
-    await renameFolder(bucket, oldPath, newName);
+    await renameFolder(bucket, id, newName);
     res.json({ success: true });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    sendError(res, err);
   }
 });
 
@@ -349,11 +384,10 @@ app.delete('/api/folders/:id', async (req, res) => {
   if (!bucket) return;
   try {
     const id = req.params.id as string;
-    const folderPath = decodeURIComponent(id);
-    await deleteFolder(bucket, folderPath);
+    await deleteFolder(bucket, id);
     res.json({ success: true });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    sendError(res, err);
   }
 });
 
@@ -365,7 +399,7 @@ app.delete('/api/files', async (req, res) => {
     await deleteAllFiles(bucket);
     res.json({ success: true });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    sendError(res, err);
   }
 });
 
@@ -377,12 +411,11 @@ app.post('/api/files/duplicates', async (req, res) => {
   if (!bucket) return;
   try {
     const entries = await getKbMetadata(bucket);
-    const lang = (req.body.lang as string) || 'fr';
+    const lang = (req.body?.lang as string) || 'fr';
     const groups = await detectDuplicates(entries, lang);
     res.json({ groups });
   } catch (err: any) {
-    console.error('Duplicate detection error:', err);
-    res.status(500).json({ error: err.message });
+    sendError(res, err);
   }
 });
 
@@ -391,22 +424,23 @@ app.post('/api/files/analyze-all', async (req, res) => {
   const bucket = resolveBucket(req, res);
   if (!bucket) return;
   try {
-    const result = await startBatchAnalysis(bucket);
+    const lang = (req.body?.lang as string) || 'fr';
+    const result = await startBatchAnalysis(bucket, lang);
     res.json(result);
   } catch (err: any) {
-    console.error('Batch analysis error:', err);
-    res.status(500).json({ error: err.message });
+    sendError(res, err);
   }
 });
 
 // GET /api/files/analyze-all/history — List past batches
 app.get('/api/files/analyze-all/history', async (req, res) => {
+  const bucket = resolveBucket(req, res);
+  if (!bucket) return;
   try {
-    const batches = await listBatches();
+    const batches = await listBatches(bucket);
     res.json(batches);
   } catch (err: any) {
-    console.error('List batches error:', err);
-    res.status(500).json({ error: err.message });
+    sendError(res, err);
   }
 });
 
@@ -417,8 +451,7 @@ app.get('/api/files/analyze-all/:batchName/details', async (req, res) => {
     const result = await getBatchAnalysisDetails(batchName);
     res.json(result);
   } catch (err: any) {
-    console.error('Batch details error:', err);
-    res.status(500).json({ error: err.message });
+    sendError(res, err);
   }
 });
 
@@ -433,8 +466,7 @@ app.get('/api/files/analyze-all/status', async (req, res) => {
     const result = await getBatchAnalysisStatus(bucket, batchName);
     res.json(result);
   } catch (err: any) {
-    console.error('Batch status error:', err);
-    res.status(500).json({ error: err.message });
+    sendError(res, err);
   }
 });
 
@@ -448,12 +480,12 @@ app.post('/api/files/:id/analyze', async (req, res) => {
     const entry = metadata.find(m => m.id === id);
     if (!entry) return res.status(404).json({ error: 'File not found in kb.ndjson' });
 
-    const result = await analyzeFile(bucket, entry);
+    const lang = (req.body?.lang as string) || 'fr';
+    const result = await analyzeFile(entry, lang);
     await updateKbEntry(bucket, id, result);
     res.json(result);
   } catch (err: any) {
-    console.error('Analyze file error:', err);
-    res.status(500).json({ error: err.message });
+    sendError(res, err);
   }
 });
 
@@ -465,7 +497,7 @@ app.get('/api/search/datastores', async (req, res) => {
     const result = await searchListDataStores();
     res.json(result);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    sendError(res, err);
   }
 });
 
@@ -479,7 +511,7 @@ app.post('/api/search/datastores', async (req, res) => {
     const result = await searchCreateDataStore(bucket, dataStoreId, displayName, location, documentProcessingConfig, appConfig);
     res.json(result);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    sendError(res, err);
   }
 });
 
@@ -493,7 +525,7 @@ app.post('/api/search/datastores/:id/import', async (req, res) => {
     const result = await searchStartImport(bucket, dataStoreId, location, mode);
     res.json(result);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    sendError(res, err);
   }
 });
 
@@ -506,7 +538,7 @@ app.get('/api/search/operations/status', async (req, res) => {
     const result = await searchGetImportOperationStatus(name, location);
     res.json(result);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    sendError(res, err);
   }
 });
 
@@ -518,7 +550,7 @@ app.get('/api/search/datastores/:id/imports', async (req, res) => {
     const result = await searchListImportOperations(dataStoreId, location);
     res.json(result);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    sendError(res, err);
   }
 });
 
@@ -532,7 +564,7 @@ app.get('/api/search/datastores/:id/status', async (req, res) => {
     const status = await searchGetDataStoreStatus(bucket, dataStoreId, location);
     res.json(status);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    sendError(res, err);
   }
 });
 
@@ -544,7 +576,7 @@ app.delete('/api/search/datastores/:id/documents', async (req, res) => {
     const result = await searchPurgeDocuments(dataStoreId, location);
     res.json(result);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    sendError(res, err);
   }
 });
 
@@ -558,7 +590,7 @@ app.get('/api/search/datastores/:id/documents', async (req, res) => {
     const result = await searchListDocuments(dataStoreId, location, pageSize, pageToken);
     res.json(result);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    sendError(res, err);
   }
 });
 
@@ -570,7 +602,7 @@ app.delete('/api/search/datastores/:id', async (req, res) => {
     await searchDeleteDataStore(dataStoreId, location);
     res.json({ success: true });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    sendError(res, err);
   }
 });
 
@@ -583,7 +615,7 @@ app.post('/api/search/datastores/:id/search', async (req, res) => {
     const result = await searchSearchQuery(dataStoreId, location, query);
     res.json(result);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    sendError(res, err);
   }
 });
 
@@ -596,8 +628,23 @@ app.post('/api/search/datastores/:id/answer', async (req, res) => {
     const result = await searchAnswerQuery(dataStoreId, location, query);
     res.json(result);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    sendError(res, err);
   }
+});
+
+// Unknown API routes: JSON 404 instead of falling through to the SPA
+app.use('/api', (_req, res) => {
+  res.status(404).json({ error: 'Not found' });
+});
+
+// Upload limits and other middleware errors
+app.use('/api', (err: any, _req: Request, res: Response, next: NextFunction) => {
+  if (err instanceof multer.MulterError) {
+    const status = err.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
+    const message = err.code === 'LIMIT_FILE_SIZE' ? `File exceeds the ${MAX_UPLOAD_SIZE_MB} MB upload limit` : err.message;
+    return res.status(status).json({ error: message });
+  }
+  next(err);
 });
 
 // Serve frontend static files (production: built frontend copied to ../public)

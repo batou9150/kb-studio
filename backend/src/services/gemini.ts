@@ -1,28 +1,72 @@
 import { GoogleGenAI, createPartFromUri } from '@google/genai';
+import type { GenerateContentConfig } from '@google/genai';
 import { GoogleAuth } from 'google-auth-library';
-import { getKbMetadata, updateKbEntry, bulkUpdateKbEntries } from './storage';
+import { googleClientOptions } from '../credentials';
+import { badRequest } from '../errors';
+import { getKbMetadata, bulkUpdateKbEntries } from './storage';
 import type { KbEntry } from './storage';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-const MODEL = 'gemini-3.1-flash-lite-preview';
+const MODEL = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite-preview';
+const BATCH_PREFIX = 'kb-studio-analysis-';
 
 const AUTH_SCOPES = [
   'https://www.googleapis.com/auth/cloud-platform',
   'https://www.googleapis.com/auth/generative-language',
 ];
 
-function createAuth(): GoogleAuth {
-  const keyFile = process.env.SERVICE_ACCOUNT_FILE;
-  if (keyFile) {
-    return new GoogleAuth({ keyFile, scopes: AUTH_SCOPES });
-  }
-  return new GoogleAuth({ scopes: AUTH_SCOPES });
-}
+const auth = new GoogleAuth({ ...googleClientOptions, scopes: AUTH_SCOPES });
 
-const auth = createAuth();
+const CATEGORIES = [
+  'faq', 'how_to', 'manual', 'troubleshooting', 'meeting_minutes', 'policy', 'sop', 'form', 'report',
+  'release_notes', 'presentation', 'memo', 'contract', 'whitepaper', 'marketing_asset', 'other',
+];
 
-const ANALYSIS_PROMPT = `Analyze this document and return ONLY a JSON object with:
-- "description": short description (1-2 sentences, in French)
+const ANALYSIS_CONFIG: GenerateContentConfig = {
+  responseMimeType: 'application/json',
+  responseJsonSchema: {
+    type: 'object',
+    properties: {
+      description: { type: 'string' },
+      value_date: { type: 'string', description: 'YYYY-MM-DD, or empty string if no date found' },
+      category: { type: 'string', enum: CATEGORIES },
+    },
+    required: ['description', 'value_date', 'category'],
+  },
+};
+
+const DUPLICATES_CONFIG: GenerateContentConfig = {
+  responseMimeType: 'application/json',
+  responseJsonSchema: {
+    type: 'array',
+    items: {
+      type: 'object',
+      properties: {
+        ids: { type: 'array', items: { type: 'string' } },
+        reason: { type: 'string' },
+      },
+      required: ['ids', 'reason'],
+    },
+  },
+};
+
+const languageName = (lang: string) => (lang.startsWith('en') ? 'English' : 'French');
+
+/** Batch display names embed the bucket so history and results stay scoped to it. */
+const batchDisplayName = (bucketName: string) => `${BATCH_PREFIX}${bucketName}-${Date.now()}`;
+
+export const batchBelongsToBucket = (displayName: string, bucketName: string) => {
+  if (!displayName.startsWith(BATCH_PREFIX)) return false;
+  if (/^\d+$/.test(displayName.slice(BATCH_PREFIX.length))) return true; // legacy name without bucket
+  const prefix = `${BATCH_PREFIX}${bucketName}-`;
+  return displayName.startsWith(prefix) && /^\d+$/.test(displayName.slice(prefix.length));
+};
+
+/** Batches whose results were already written to kb.ndjson by this instance. */
+const appliedBatches = new Set<string>();
+
+const analysisPrompt = (lang: string) => `Analyze this document and return ONLY a JSON object with:
+- "description": short description (1-2 sentences, in ${languageName(lang)})
 - "value_date": most relevant date found in the document (YYYY-MM-DD format) or "" if none found
 - "category": one of the following values:
 
@@ -56,7 +100,7 @@ function parseAnalysisResponse(text: string): { description: string; value_date:
   };
 }
 
-export async function analyzeFile(bucketName: string, entry: KbEntry): Promise<{ description: string; value_date: string; category: string }> {
+export async function analyzeFile(entry: KbEntry, lang: string = 'fr'): Promise<{ description: string; value_date: string; category: string }> {
   const registered = await ai.files.registerFiles({ auth, uris: [entry.content.uri] });
   const fileUri = registered.files?.[0]?.uri ?? entry.content.uri;
 
@@ -67,17 +111,18 @@ export async function analyzeFile(bucketName: string, entry: KbEntry): Promise<{
         role: 'user',
         parts: [
           createPartFromUri(fileUri, entry.content.mimeType),
-          { text: ANALYSIS_PROMPT },
+          { text: analysisPrompt(lang) },
         ],
       },
     ],
+    config: ANALYSIS_CONFIG,
   });
 
   const text = response.text ?? '';
   return parseAnalysisResponse(text);
 }
 
-export async function startBatchAnalysis(bucketName: string): Promise<{ batchName: string; totalFiles: number }> {
+export async function startBatchAnalysis(bucketName: string, lang: string = 'fr'): Promise<{ batchName: string; totalFiles: number }> {
   const entries = await getKbMetadata(bucketName);
   if (entries.length === 0) {
     throw new Error('No files to analyze');
@@ -99,10 +144,11 @@ export async function startBatchAnalysis(bucketName: string): Promise<{ batchNam
         role: 'user' as const,
         parts: [
           createPartFromUri(registeredFiles[i]?.uri ?? entry.content.uri, entry.content.mimeType),
-          { text: ANALYSIS_PROMPT },
+          { text: analysisPrompt(lang) },
         ],
       },
     ],
+    config: ANALYSIS_CONFIG,
     metadata: { id: entry.id },
   }));
 
@@ -110,7 +156,7 @@ export async function startBatchAnalysis(bucketName: string): Promise<{ batchNam
     model: MODEL,
     src: requests,
     config: {
-      displayName: `kb-studio-analysis-${Date.now()}`,
+      displayName: batchDisplayName(bucketName),
     },
   });
 
@@ -120,7 +166,7 @@ export async function startBatchAnalysis(bucketName: string): Promise<{ batchNam
   };
 }
 
-export async function listBatches(): Promise<{
+export async function listBatches(bucketName: string): Promise<{
   name: string;
   state: string;
   displayName: string;
@@ -139,7 +185,7 @@ export async function listBatches(): Promise<{
   const pager = await ai.batches.list({ config: { pageSize: 100 } });
   for await (const batch of pager) {
     const dn = batch.displayName ?? '';
-    if (!dn.startsWith('kb-studio-analysis-')) continue;
+    if (!batchBelongsToBucket(dn, bucketName)) continue;
     result.push({
       name: batch.name!,
       state: stateMap[batch.state ?? ''] ?? 'unknown',
@@ -181,13 +227,10 @@ function extractResponseError(resp: any): string | null {
   return null; // No error
 }
 
-export async function getBatchAnalysisDetails(batchName: string): Promise<{
-  results: { id: string; description: string; value_date: string; category: string }[];
-  failed: { id: string; error: string }[];
-}> {
-  const batch = await ai.batches.get({ name: batchName });
-  const responses = batch.dest?.inlinedResponses ?? [];
-  const results: { id: string; description: string; value_date: string; category: string }[] = [];
+type AnalysisResult = { id: string; description: string; value_date: string; category: string };
+
+function collectBatchResults(responses: any[]): { results: AnalysisResult[]; failed: { id: string; error: string }[] } {
+  const results: AnalysisResult[] = [];
   const failed: { id: string; error: string }[] = [];
 
   for (const resp of responses) {
@@ -202,14 +245,21 @@ export async function getBatchAnalysisDetails(batchName: string): Promise<{
 
     try {
       const text = resp.response?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-      const parsed = parseAnalysisResponse(text);
-      results.push({ id, ...parsed });
+      results.push({ id, ...parseAnalysisResponse(text) });
     } catch (err: any) {
       failed.push({ id, error: `Parse error: ${err.message || String(err)}` });
     }
   }
 
   return { results, failed };
+}
+
+export async function getBatchAnalysisDetails(batchName: string): Promise<{
+  results: AnalysisResult[];
+  failed: { id: string; error: string }[];
+}> {
+  const batch = await ai.batches.get({ name: batchName });
+  return collectBatchResults(batch.dest?.inlinedResponses ?? []);
 }
 
 export async function detectDuplicates(entries: KbEntry[], lang: string = 'fr'): Promise<{ ids: string[]; reason: string }[]> {
@@ -229,7 +279,7 @@ Identify groups of files that are likely duplicates or near-duplicates based on 
 
 Return ONLY a JSON array of duplicate groups. Each group is an object with:
 - "ids": array of file ids that are duplicates of each other
-- "reason": short explanation of why they are duplicates (in ${lang === 'fr' ? 'French' : 'English'})
+- "reason": short explanation of why they are duplicates (in ${languageName(lang)})
 
 If no duplicates are found, return an empty array: []
 
@@ -242,6 +292,7 @@ ${jsonlContent}
   const response = await ai.models.generateContent({
     model: MODEL,
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    config: DUPLICATES_CONFIG,
   });
 
   const text = response.text ?? '';
@@ -254,44 +305,23 @@ export async function getBatchAnalysisStatus(bucketName: string, batchName: stri
   succeededCount?: number;
   failedCount?: number;
   totalCount?: number;
-  results?: { id: string; description: string; value_date: string; category: string }[];
+  results?: AnalysisResult[];
   failed?: { id: string; error: string }[];
 }> {
   const batch = await ai.batches.get({ name: batchName });
   const state = batch.state ?? 'JOB_STATE_UNSPECIFIED';
 
   if (state === 'JOB_STATE_SUCCEEDED') {
-    const responses = batch.dest?.inlinedResponses ?? [];
-    const results: { id: string; description: string; value_date: string; category: string }[] = [];
-    const failed: { id: string; error: string }[] = [];
-    const bulkUpdates = new Map<string, Partial<{ description: string; value_date: string; category: string }>>();
+    const { results, failed } = collectBatchResults(batch.dest?.inlinedResponses ?? []);
+    for (const f of failed) console.error(`Batch response error for id ${f.id}:`, f.error);
 
-    for (const resp of responses) {
-      const id = resp.metadata?.id;
-      if (!id) continue;
-
-      const respError = extractResponseError(resp);
-      if (respError) {
-        console.error(`Batch response error for id ${id}:`, respError);
-        failed.push({ id, error: respError });
-        continue;
+    // Write results once: re-polling a finished batch must not overwrite later manual edits
+    if (results.length > 0 && !appliedBatches.has(batchName)) {
+      if (!batchBelongsToBucket(batch.displayName ?? '', bucketName)) {
+        throw badRequest(`Batch ${batchName} was not started for bucket ${bucketName}`);
       }
-
-      try {
-        const text = resp.response?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-        const parsed = parseAnalysisResponse(text);
-        bulkUpdates.set(id, parsed);
-        results.push({ id, ...parsed });
-      } catch (err: any) {
-        const errorMsg = `Parse error: ${err.message || String(err)}`;
-        console.error(`Failed to parse batch response for id ${id}:`, errorMsg);
-        failed.push({ id, error: errorMsg });
-      }
-    }
-
-    // Single write for all successful updates
-    if (bulkUpdates.size > 0) {
-      await bulkUpdateKbEntries(bucketName, bulkUpdates);
+      await bulkUpdateKbEntries(bucketName, new Map(results.map(({ id, ...upd }) => [id, upd])));
+      appliedBatches.add(batchName);
     }
 
     return { state: 'succeeded', results, failed };
