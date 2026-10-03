@@ -14,7 +14,7 @@ KB-Studio is a web application designed to allow non-technical users to manage a
 - **Folder Organization:** Create, rename, delete, and navigate through a virtual folder hierarchy
 - **Drag & Drop:** Upload files by dragging them into the explorer, or move files between folders
 - **Duplicate Detection:** Pre-upload checks with options to overwrite or skip existing files
-- **Search:** Full-text search across file names
+- **Search:** Filter files by name
 
 ### AI-Powered Metadata Extraction
 - **Single File Analysis:** Analyze individual documents on demand
@@ -22,8 +22,10 @@ KB-Studio is a web application designed to allow non-technical users to manage a
 - **Extracted Metadata:**
   - **Description** — 1-2 sentence summary of the document
   - **Value Date** — Relevant date extracted from content or filename (YYYY-MM-DD)
-  - **Category** — Classification into one of 17 predefined categories (FAQ, how-to, manual, contract, etc.)
+  - **Category** — Classification into one of 16 predefined categories (FAQ, how-to, manual, contract, etc.)
 - **Manual Editing:** Review and edit AI-generated metadata at any time
+- **Language:** Descriptions are generated in the UI language (French or English)
+- **Duplicate Detection:** The Insights tab flags likely duplicate documents using Gemini
 - **Analysis History:** View past batch analysis results with drill-down details
 
 ### Vertex AI Search Integration
@@ -41,12 +43,12 @@ KB-Studio is a web application designed to allow non-technical users to manage a
 - **Frontend:** React 19 (TypeScript) built with Vite, styled with vanilla CSS
 - **Backend:** Node.js with Express 5 (TypeScript) serving a REST API
 - **Storage:** Google Cloud Storage for documents and `kb.ndjson` metadata
-- **AI:** Google GenAI SDK (`@google/genai`) using Gemini 3.1 Flash Lite Preview
+- **AI:** Google GenAI SDK (`@google/genai`), Gemini 3.1 Flash Lite Preview by default (configurable with `GEMINI_MODEL`)
 - **Search:** Vertex AI Search (Discovery Engine) for document indexing and retrieval
 
 ## Prerequisites
 
-- [Node.js](https://nodejs.org/) v18 or higher
+- [Node.js](https://nodejs.org/) v22 or higher (v24 LTS recommended, used by the Docker image and CI)
 - A Google Cloud Project with billing enabled
 - A Google Cloud Storage bucket
 - A Gemini API Key (from [Google AI Studio](https://aistudio.google.com/))
@@ -74,10 +76,14 @@ Edit `backend/.env`:
 | Variable | Description | Default |
 |---|---|---|
 | `PORT` | Server port | `8080` |
-| `GCS_BUCKET_NAME` | GCS bucket name(s), comma-separated for multi-bucket | — |
+| `GCS_BUCKET_NAME` | GCS bucket name(s), comma-separated for multi-bucket | `kb-studio-bucket` |
 | `GOOGLE_CLOUD_PROJECT` | Google Cloud project ID | — |
 | `GEMINI_API_KEY` | Gemini API key | — |
-| `SERVICE_ACCOUNT_FILE` | Path to service account key JSON for GCS auth (optional, uses ADC if unset) | — |
+| `SERVICE_ACCOUNT_FILE` | Path to a service account key JSON used by all Google Cloud clients (optional, uses ADC if unset) | — |
+| `GEMINI_MODEL` | Gemini model used for analysis and duplicate detection (optional) | `gemini-3.1-flash-lite-preview` |
+| `MAX_UPLOAD_SIZE_MB` | Maximum size of an uploaded file (optional) | `32` |
+| `CORS_ORIGIN` | Comma-separated origins allowed to call the API cross-origin (optional, see [Security](#security)) | — |
+| `IAP_AUDIENCE` | Expected audience of the IAP-signed JWT; enables request verification (optional, see [Security](#security)) | — |
 | `APP_NAME` | Custom application name (optional) | `KB-Studio` |
 | `APP_LOGO` | Custom logo URL (optional) | — |
 
@@ -132,7 +138,11 @@ The application is accessible at `http://localhost:8080`.
 | `GCS_BUCKET_NAME` | GCS bucket name(s), comma-separated for multi-bucket | `kb-studio-bucket` |
 | `GOOGLE_CLOUD_PROJECT` | Google Cloud project ID | — |
 | `GEMINI_API_KEY` | Gemini API key | — |
-| `SERVICE_ACCOUNT_FILE` | Path to service account key JSON for GCS auth | — |
+| `SERVICE_ACCOUNT_FILE` | Path to a service account key JSON used by all Google Cloud clients | — |
+| `GEMINI_MODEL` | Gemini model used for analysis and duplicate detection | `gemini-3.1-flash-lite-preview` |
+| `MAX_UPLOAD_SIZE_MB` | Maximum size of an uploaded file | `32` |
+| `CORS_ORIGIN` | Comma-separated origins allowed to call the API cross-origin | — |
+| `IAP_AUDIENCE` | Expected audience of the IAP-signed JWT; enables request verification | — |
 | `APP_NAME` | Custom application name | `KB-Studio` |
 | `APP_LOGO` | Custom logo URL | — |
 
@@ -160,34 +170,62 @@ Replace `REGION` with your preferred region (e.g., `europe-west1`).
 
 > **Tip:** For sensitive values like `GEMINI_API_KEY`, consider using [Secret Manager](https://cloud.google.com/run/docs/configuring/services/secrets) instead of plain environment variables.
 
+> **Note:** Cloud Run limits HTTP/1 request bodies to 32 MiB, which is why `MAX_UPLOAD_SIZE_MB` defaults to `32`.
+
+## Security
+
+KB-Studio has **no user accounts of its own**: anyone who can reach the API can read, modify and delete the knowledge base (including `DELETE /api/files`, which empties a bucket). Always deploy it behind an authenticating proxy such as [Identity-Aware Proxy](https://cloud.google.com/iap/docs) (the `--iap` flag above).
+
+- **`IAP_AUDIENCE`** — when set, every `/api` request must carry a valid IAP-signed JWT (`x-goog-iap-jwt-assertion` header) for this audience, so the API refuses traffic that bypassed IAP. For Cloud Run with IAP enabled directly on the service, the audience is `/projects/PROJECT_NUMBER/locations/REGION/services/SERVICE_NAME`; behind a load balancer, it is `/projects/PROJECT_NUMBER/global/backendServices/BACKEND_SERVICE_ID`. See [Securing your app with signed headers](https://cloud.google.com/iap/docs/signed-headers-howto).
+- **CORS** — in production (`NODE_ENV=production`, set by the Docker image) cross-origin requests are refused unless `CORS_ORIGIN` lists the allowed origins. In development every origin is allowed so the Vite dev server can reach the API.
+
 ## Project Structure
 
 ```
 kb-studio/
 ├── frontend/                     # React SPA
 │   └── src/
+│       ├── App.tsx               # Main app, routing & state management
 │       ├── components/           # UI components
-│       │   ├── App.tsx           # Main app, state management
-│       │   ├── Header.tsx        # Navigation with view tabs
+│       │   ├── Header.tsx        # Navigation with view tabs & language switch
 │       │   ├── Sidebar.tsx       # Folder tree navigation
 │       │   ├── Explorer.tsx      # File list with toolbar
 │       │   ├── DetailsPanel.tsx  # File preview & metadata editing
+│       │   ├── InsightsPanel.tsx # KB statistics & duplicate detection
 │       │   ├── SearchPanel.tsx   # Datastore & indexing management
 │       │   ├── AnswerPanel.tsx   # Search & answer query interface
 │       │   └── AdminPanel.tsx    # Administration functions
+│       ├── hooks/                # Shared React hooks
+│       ├── i18n/                 # Translations (en, fr)
 │       ├── api/                  # Axios HTTP client
 │       └── types/                # TypeScript interfaces
 ├── backend/                      # Express API server
 │   └── src/
 │       ├── server.ts             # Express app & route definitions
+│       ├── credentials.ts        # Shared Google Cloud client options
+│       ├── errors.ts             # HTTP errors mapped to status codes
 │       └── services/
-│           ├── storage.ts        # Google Cloud Storage integration
+│           ├── storage.ts        # Google Cloud Storage & kb.ndjson management
 │           ├── gemini.ts         # Gemini API for document analysis
 │           └── search.ts         # Vertex AI Search integration
 └── README.md
 ```
 
+## Development
+
+```bash
+# Backend: type check, unit tests, build
+cd backend && npm run typecheck && npm test && npm run build
+
+# Frontend: lint, type check & build
+cd frontend && npm run lint && npm run build
+```
+
+The same checks run in GitHub Actions on every pull request (`.github/workflows/ci.yml`), and must pass before the Docker image is published.
+
 ## API Reference
+
+All file, folder and analysis endpoints accept an optional `?bucket=` query parameter selecting one of the buckets listed in `GCS_BUCKET_NAME` (default: the first one). Errors are returned as `{ "error": "..." }` with a `400` (invalid input), `404` (unknown file or route), `409` (target name already exists), `413` (file too large) or `500` status.
 
 ### Folders
 | Method | Endpoint | Description |
@@ -203,7 +241,8 @@ kb-studio/
 | `GET` | `/api/files` | List files (`?folderId=`, `?search=`) |
 | `POST` | `/api/files` | Upload file(s) |
 | `POST` | `/api/files/check-duplicates` | Check for existing files |
-| `PUT` | `/api/files/:id` | Overwrite file content |
+| `DELETE` | `/api/files` | Delete **all** files of the bucket |
+| `PUT` | `/api/files/:id` | Replace file content (keeps the id; a different file name renames it) |
 | `PATCH` | `/api/files/:id` | Update metadata |
 | `DELETE` | `/api/files/:id` | Delete a file |
 | `GET` | `/api/files/:id/download` | Get signed download URL |
@@ -214,11 +253,12 @@ kb-studio/
 ### Analysis (Gemini)
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/files/:id/analyze` | Analyze a single file |
-| `POST` | `/api/files/analyze-all` | Start batch analysis |
-| `GET` | `/api/files/analyze-all/status` | Poll batch status |
-| `GET` | `/api/files/analyze-all/history` | List past batches |
+| `POST` | `/api/files/:id/analyze` | Analyze a single file (body: `{ lang }`) |
+| `POST` | `/api/files/analyze-all` | Start batch analysis (body: `{ lang }`) |
+| `GET` | `/api/files/analyze-all/status` | Poll batch status; results are written to `kb.ndjson` once |
+| `GET` | `/api/files/analyze-all/history` | List past batches of the bucket |
 | `GET` | `/api/files/analyze-all/:batchName/details` | Get batch results |
+| `POST` | `/api/files/duplicates` | Detect likely duplicates (body: `{ lang }`) |
 
 ### Vertex AI Search
 | Method | Endpoint | Description |
