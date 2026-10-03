@@ -1,18 +1,20 @@
 {
-  "name": "backend",
+  "name": "kb-studio-backend",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "private": true,
+  "description": "KB-Studio REST API (Express, Google Cloud Storage, Gemini, Vertex AI Search)",
+  "main": "dist/server.js",
   "scripts": {
     "start": "tsx src/server.ts",
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "test": "node --import tsx --test \"src/**/*.test.ts\""
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "type": "commonjs",
+  "engines": {
+    "node": ">=22"
+  },
   "dependencies": {
     "@google-cloud/discoveryengine": "^2.5.3",
     "@google-cloud/storage": "^7.19.0",
@@ -21,15 +23,13 @@
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "google-auth-library": "^10.6.1",
-    "multer": "^2.1.0",
-    "pdf-parse": "^2.4.5"
+    "multer": "^2.1.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/multer": "^2.0.0",
     "@types/node": "^25.3.3",
-    "@types/uuid": "^10.0.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }

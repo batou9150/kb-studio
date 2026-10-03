@@ -2,7 +2,7 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import path from 'path';
 import multer from 'multer';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import {
   initStorage, getFolders, createFolder, getFiles, uploadFile,
   getFileStream, deleteFile, moveFile, appendKbEntries, updateKbEntry, getKbMetadata,
@@ -160,7 +160,7 @@ app.post('/api/files', upload.array('files'), async (req, res) => {
 
       const filePath = await uploadFile(bucket, file, folderPath);
 
-      const id = uuidv4();
+      const id = randomUUID();
       kbEntries.push({
         id,
         structData: {

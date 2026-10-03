@@ -1,5 +1,5 @@
 import { Storage, File } from '@google-cloud/storage';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import dotenv from 'dotenv';
 import path from 'path';
 
@@ -106,7 +106,7 @@ async function reconcileKbMetadata(bucketName: string): Promise<void> {
     const fileName = file.name.split('/').pop() || file.name;
     const folder = file.name.includes('/') ? file.name.substring(0, file.name.lastIndexOf('/')) : '';
     newEntries.push({
-      id: uuidv4(),
+      id: randomUUID(),
       structData: {
         title: fileName,
         description: '',
