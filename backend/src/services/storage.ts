@@ -258,24 +258,38 @@ export const moveFile = async (bucketName: string, filePath: string, newFolderPa
 };
 
 // KB JSON Management
-export const getKbMetadata = async (bucketName: string): Promise<KbEntry[]> => {
-  try {
-    const bucket = getBucket(bucketName);
-    const [exists] = await bucket.file(kbJsonFile).exists();
-    if (!exists) return [];
 
-    const [content] = await bucket.file(kbJsonFile).download();
-    const lines = content.toString().trim().split(/\\n|\n/);
-    return lines.filter(line => line.trim() !== '').map(line => JSON.parse(line));
-  } catch (error) {
-    console.error('Error reading kb.ndjson:', error);
-    return [];
-  }
+/**
+ * Parse kb.ndjson content. Records are separated by real newlines only: a
+ * newline inside a string value is serialized by JSON.stringify as the
+ * two-character escape `\n`, which must not be treated as a separator.
+ * Throws on a malformed line so a bad read can never be saved back as data loss.
+ */
+export const parseKbNdjson = (content: string): KbEntry[] =>
+  content.split('\n').flatMap((line, i) => {
+    if (line.trim() === '') return [];
+    try {
+      return [JSON.parse(line) as KbEntry];
+    } catch (err: any) {
+      throw new Error(`Invalid ${kbJsonFile} line ${i + 1}: ${err.message}`);
+    }
+  });
+
+export const serializeKbNdjson = (metadata: KbEntry[]): string =>
+  metadata.map(entry => JSON.stringify(entry)).join('\n') + '\n';
+
+export const getKbMetadata = async (bucketName: string): Promise<KbEntry[]> => {
+  const bucket = getBucket(bucketName);
+  const [exists] = await bucket.file(kbJsonFile).exists();
+  if (!exists) return [];
+
+  const [content] = await bucket.file(kbJsonFile).download();
+  return parseKbNdjson(content.toString('utf-8'));
 };
 
 const saveKbMetadata = async (bucketName: string, metadata: KbEntry[]) => {
   const bucket = getBucket(bucketName);
-  const ndjson = metadata.map(entry => JSON.stringify(entry)).join("\n") + "\n";
+  const ndjson = serializeKbNdjson(metadata);
   await bucket.file(kbJsonFile).save(ndjson, {
     metadata: { contentType: 'application/x-ndjson' }
   });
