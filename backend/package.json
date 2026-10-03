@@ -2,7 +2,7 @@
   "name": "kb-studio-backend",
   "version": "1.0.0",
   "private": true,
-  "description": "KB-Studio REST API (Express, Google Cloud Storage, Gemini, Vertex AI Search)",
+  "description": "KB-Studio REST API (Express, Google Cloud Storage, Gemini, Agent Search)",
   "main": "dist/server.js",
   "scripts": {
     "start": "tsx src/server.ts",

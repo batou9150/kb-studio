@@ -12,7 +12,7 @@ Tagline : Pilotez votre base de connaissances
 ## Contexte
 
 La base de connaissance est constituée de documents (pdf, html, docx, pptx, xlsx and txt.) stockés dans un bucket.
-La base de connaissance est elle-même stockée dans fichier `kb.ndjson` (à la racine du bucket), reprenant la structure attendue par vertex ai search pour les documents non structurés avec metatata.
+La base de connaissance est elle-même stockée dans fichier `kb.ndjson` (à la racine du bucket), reprenant la structure attendue par Agent Search (ex-Vertex AI Search) pour les documents non structurés avec metatata.
 
 ## Architecture technique
 
@@ -26,7 +26,7 @@ La base de connaissance est elle-même stockée dans fichier `kb.ndjson` (à la 
 ## Détails d'implémentation technique
 
 ### 1. Structure de la Base de Connaissances (`kb.ndjson`)
-Le fichier de métadonnées doit suivre le format NDJSON (Newline Delimited JSON) attendu par Vertex AI Search pour les données non structurées. Chaque ligne doit être un objet JSON valide :
+Le fichier de métadonnées doit suivre le format NDJSON (Newline Delimited JSON) attendu par Agent Search pour les données non structurées. Chaque ligne doit être un objet JSON valide :
 ```json
 {
   "id": "unique-doc-id",
@@ -83,7 +83,7 @@ L'accès à l'interface est sécurisé via IAP configuré directement sur le ser
 
 - Intégrer une visionneuse de documents
 
-- Preview du search avec une application vertex ai search directement interface
+- Preview du search avec une application Agent Search directement interface
 
 
 ## Endpoints API à implémenter

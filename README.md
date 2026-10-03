@@ -28,8 +28,8 @@ KB-Studio is a web application designed to allow non-technical users to manage a
 - **Duplicate Detection:** The Insights tab flags likely duplicate documents using Gemini
 - **Analysis History:** View past batch analysis results with drill-down details
 
-### Vertex AI Search Integration
-- **Datastore Management:** Create and manage Vertex AI Search datastores
+### Agent Search Integration
+- **Datastore Management:** Create and manage Agent Search (formerly Vertex AI Search) datastores
 - **Document Indexing:** Import documents from the knowledge base into datastores
 - **Search & Answer:** Query indexed documents with optional LLM-powered answer generation
 - **Multi-Region Support:** Manage datastores across global, EU, and US locations
@@ -44,7 +44,7 @@ KB-Studio is a web application designed to allow non-technical users to manage a
 - **Backend:** Node.js with Express 5 (TypeScript) serving a REST API
 - **Storage:** Google Cloud Storage for documents and `kb.ndjson` metadata
 - **AI:** Google GenAI SDK (`@google/genai`), Gemini 3.5 Flash Lite by default (configurable with `GEMINI_MODEL`)
-- **Search:** Vertex AI Search (Discovery Engine) for document indexing and retrieval
+- **Search:** Agent Search (formerly Vertex AI Search, Discovery Engine API) for document indexing and retrieval
 
 ## Prerequisites
 
@@ -207,7 +207,7 @@ kb-studio/
 │       └── services/
 │           ├── storage.ts        # Google Cloud Storage & kb.ndjson management
 │           ├── gemini.ts         # Gemini API for document analysis
-│           └── search.ts         # Vertex AI Search integration
+│           └── search.ts         # Agent Search integration (Discovery Engine API)
 └── README.md
 ```
 
@@ -260,7 +260,7 @@ All file, folder and analysis endpoints accept an optional `?bucket=` query para
 | `GET` | `/api/files/analyze-all/:batchName/details` | Get batch results |
 | `POST` | `/api/files/duplicates` | Detect likely duplicates (body: `{ lang }`) |
 
-### Vertex AI Search
+### Agent Search
 | Method | Endpoint | Description |
 |---|---|---|
 | `GET` | `/api/search/datastores` | List datastores |

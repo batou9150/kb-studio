@@ -90,7 +90,7 @@ export interface AnswerQueryResponse {
   searchResults: AnswerSearchResult[];
 }
 
-/** Vertex AI Search document processing options sent when creating a datastore. */
+/** Agent Search document processing options sent when creating a datastore. */
 export interface DocumentProcessingConfig {
   defaultParsingConfig?: {
     ocrParsingConfig?: { useNativeText: boolean };
