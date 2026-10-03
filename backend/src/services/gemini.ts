@@ -7,7 +7,7 @@ import { getKbMetadata, bulkUpdateKbEntries } from './storage';
 import type { KbEntry } from './storage';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-const MODEL = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite-preview';
+const MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
 const BATCH_PREFIX = 'kb-studio-analysis-';
 
 const AUTH_SCOPES = [

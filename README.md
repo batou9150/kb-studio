@@ -43,7 +43,7 @@ KB-Studio is a web application designed to allow non-technical users to manage a
 - **Frontend:** React 19 (TypeScript) built with Vite, styled with vanilla CSS
 - **Backend:** Node.js with Express 5 (TypeScript) serving a REST API
 - **Storage:** Google Cloud Storage for documents and `kb.ndjson` metadata
-- **AI:** Google GenAI SDK (`@google/genai`), Gemini 3.1 Flash Lite Preview by default (configurable with `GEMINI_MODEL`)
+- **AI:** Google GenAI SDK (`@google/genai`), Gemini 3.5 Flash Lite by default (configurable with `GEMINI_MODEL`)
 - **Search:** Vertex AI Search (Discovery Engine) for document indexing and retrieval
 
 ## Prerequisites
@@ -80,7 +80,7 @@ Edit `backend/.env`:
 | `GOOGLE_CLOUD_PROJECT` | Google Cloud project ID | — |
 | `GEMINI_API_KEY` | Gemini API key | — |
 | `SERVICE_ACCOUNT_FILE` | Path to a service account key JSON used by all Google Cloud clients (optional, uses ADC if unset) | — |
-| `GEMINI_MODEL` | Gemini model used for analysis and duplicate detection (optional) | `gemini-3.1-flash-lite-preview` |
+| `GEMINI_MODEL` | Gemini model used for analysis and duplicate detection (optional) | `gemini-3.5-flash-lite` |
 | `MAX_UPLOAD_SIZE_MB` | Maximum size of an uploaded file (optional) | `32` |
 | `CORS_ORIGIN` | Comma-separated origins allowed to call the API cross-origin (optional, see [Security](#security)) | — |
 | `IAP_AUDIENCE` | Expected audience of the IAP-signed JWT; enables request verification (optional, see [Security](#security)) | — |
@@ -139,7 +139,7 @@ The application is accessible at `http://localhost:8080`.
 | `GOOGLE_CLOUD_PROJECT` | Google Cloud project ID | — |
 | `GEMINI_API_KEY` | Gemini API key | — |
 | `SERVICE_ACCOUNT_FILE` | Path to a service account key JSON used by all Google Cloud clients | — |
-| `GEMINI_MODEL` | Gemini model used for analysis and duplicate detection | `gemini-3.1-flash-lite-preview` |
+| `GEMINI_MODEL` | Gemini model used for analysis and duplicate detection | `gemini-3.5-flash-lite` |
 | `MAX_UPLOAD_SIZE_MB` | Maximum size of an uploaded file | `32` |
 | `CORS_ORIGIN` | Comma-separated origins allowed to call the API cross-origin | — |
 | `IAP_AUDIENCE` | Expected audience of the IAP-signed JWT; enables request verification | — |
