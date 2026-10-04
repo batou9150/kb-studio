@@ -7,6 +7,8 @@ KB-Studio is a web application designed to allow non-technical users to manage a
 
 **Tagline:** Pilotez votre base de connaissances
 
+![KB-Studio](docs/screenshot-explorer.png)
+
 ## Features
 
 ### Knowledge Base Management
