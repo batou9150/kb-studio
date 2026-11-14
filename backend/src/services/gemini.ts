@@ -1,7 +1,6 @@
 import { GoogleGenAI, createPartFromUri } from '@google/genai';
 import type { GenerateContentConfig } from '@google/genai';
-import { GoogleAuth } from 'google-auth-library';
-import { googleClientOptions } from '../credentials';
+import { googleAuth as auth } from '../credentials';
 import { badRequest } from '../errors';
 import { getKbMetadata, bulkUpdateKbEntries } from './storage';
 import type { KbEntry } from './storage';
@@ -11,13 +10,6 @@ import type { KbEntry } from './storage';
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY, apiVersion: 'v1beta' });
 const MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
 const BATCH_PREFIX = 'kb-studio-analysis-';
-
-const AUTH_SCOPES = [
-  'https://www.googleapis.com/auth/cloud-platform',
-  'https://www.googleapis.com/auth/generative-language',
-];
-
-const auth = new GoogleAuth({ ...googleClientOptions, scopes: AUTH_SCOPES });
 
 const CATEGORIES = [
   'faq', 'how_to', 'manual', 'troubleshooting', 'meeting_minutes', 'policy', 'sop', 'form', 'report',
