@@ -338,6 +338,9 @@ export const parseKbNdjson = (content: string): KbEntry[] =>
 export const serializeKbNdjson = (metadata: KbEntry[]): string =>
   metadata.map(entry => JSON.stringify(entry)).join('\n') + '\n';
 
+/** HTTP status of a GCS error (storage v9 raises GaxiosErrors; older paths set `code`). */
+const httpStatus = (err: any): unknown => err?.response?.status ?? err?.status ?? err?.code;
+
 /** Read kb.ndjson along with its GCS generation (0 when the file does not exist yet). */
 const readKbMetadata = async (bucketName: string): Promise<{ entries: KbEntry[]; generation: number | string }> => {
   const bucket = getBucket(bucketName);
@@ -346,7 +349,7 @@ const readKbMetadata = async (bucketName: string): Promise<{ entries: KbEntry[];
     const [md] = await bucket.file(kbJsonFile).getMetadata();
     generation = md.generation ?? 0;
   } catch (err: any) {
-    if (err.code === 404) return { entries: [], generation: 0 };
+    if (httpStatus(err) === 404) return { entries: [], generation: 0 };
     throw err;
   }
   const [content] = await bucket.file(kbJsonFile, { generation }).download();
@@ -379,7 +382,7 @@ export const mutateKbMetadata = async (
       });
       return;
     } catch (err: any) {
-      if (err.code !== 412 || attempt >= KB_WRITE_MAX_ATTEMPTS) throw err;
+      if (httpStatus(err) !== 412 || attempt >= KB_WRITE_MAX_ATTEMPTS) throw err;
       await new Promise(resolve => setTimeout(resolve, Math.random() * 100 * attempt));
     }
   }
