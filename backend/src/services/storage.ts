@@ -1,9 +1,9 @@
 import { Storage } from '@google-cloud/storage';
 import { randomUUID } from 'crypto';
-import { googleClientOptions } from '../credentials';
+import { googleAuth } from '../credentials';
 import { badRequest, conflict, notFound } from '../errors';
 
-const storage = new Storage(googleClientOptions);
+const storage = new Storage({ authClient: googleAuth });
 const kbJsonFile = 'kb.ndjson';
 
 const getBucket = (name: string) => storage.bucket(name);
