@@ -6,7 +6,9 @@ import { badRequest } from '../errors';
 import { getKbMetadata, bulkUpdateKbEntries } from './storage';
 import type { KbEntry } from './storage';
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+// Pin v1beta: @google/genai v3 defaults the Gemini Developer API to v1, which lacks
+// the *-latest aliases and some preview models that GEMINI_MODEL may point to.
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY, apiVersion: 'v1beta' });
 const MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
 const BATCH_PREFIX = 'kb-studio-analysis-';
 
